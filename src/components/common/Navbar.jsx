@@ -93,14 +93,17 @@ export function Navbar() {
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <Link
+            to={ROUTES.PROFILE}
+            className="flex items-center gap-2 transition-opacity hover:opacity-80"
+          >
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
               <User className="h-4 w-4 text-slate-900" />
             </div>
             <span className="hidden text-sm font-medium md:inline">
               {user?.name}
             </span>
-          </div>
+          </Link>
         </nav>
       </header>
     );
