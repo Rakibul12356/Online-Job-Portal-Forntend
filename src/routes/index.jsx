@@ -16,6 +16,7 @@ import {
   CompanySettingsPage,
   CreateJobPage,
   ManageJobsPage,
+  CompanyApplicantsPage,
 } from './lazyRoutes';
 
 export const router = createBrowserRouter([
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.COMPANY_SETTINGS, Component: CompanySettingsPage },
           { path: ROUTES.CREATE_JOB, Component: CreateJobPage },
           { path: ROUTES.MANAGE_JOBS, Component: ManageJobsPage },
+          { path: ROUTES.COMPANY_APPLICANTS, Component: CompanyApplicantsPage },
         ],
       },
       { path: ROUTES.NOT_FOUND, Component: NotFoundPage },

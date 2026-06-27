@@ -13,7 +13,7 @@ const userNavLinks = [
 const companyNavLinks = [
   { to: ROUTES.DASHBOARD, label: 'Dashboard' },
   { to: ROUTES.MANAGE_JOBS, label: 'Manage Jobs' },
-  { to: '#', label: 'Applicants' },
+  { to: ROUTES.COMPANY_APPLICANTS, label: 'Applicants' },
 ];
 
 export function Navbar() {

@@ -14,6 +14,7 @@ export const ROUTES = {
   COMPANY_SETTINGS: '/company/settings',
   CREATE_JOB: '/company/jobs/create',
   MANAGE_JOBS: '/company/jobs',
+  COMPANY_APPLICANTS: '/company/applicants',
   NOT_FOUND: '*',
 };
 

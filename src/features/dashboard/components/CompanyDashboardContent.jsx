@@ -233,7 +233,7 @@ export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
                   label: 'Manage Jobs',
                   to: ROUTES.MANAGE_JOBS,
                 },
-                { icon: Users, label: 'View Applicants' },
+                { icon: Users, label: 'View Applicants', to: ROUTES.COMPANY_APPLICANTS },
                 {
                   icon: Settings,
                   label: 'Company Settings',
