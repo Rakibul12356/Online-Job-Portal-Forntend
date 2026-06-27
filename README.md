@@ -2,6 +2,10 @@
 
 Frontend-only React architecture for a scalable job portal application.
 
+## Live Demo
+
+🌐 **[https://online-job-portal-forntend.vercel.app/](https://online-job-portal-forntend.vercel.app/)**
+
 ## Tech Stack
 
 - React 19 + Vite 7
