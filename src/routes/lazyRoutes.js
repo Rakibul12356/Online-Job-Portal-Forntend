@@ -12,3 +12,4 @@ export const ApplicationsPage = lazy(
 export const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 export const SignInPage = lazy(() => import('@/pages/auth/SignInPage'));
 export const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'));
+export const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'));

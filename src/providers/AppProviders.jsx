@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { AppRouterProvider } from './RouterProvider';
-import { AppContextProvider } from '@/context';
+import { AppContextProvider, AuthProvider } from '@/context';
 import { ErrorBoundary, LoadingSpinner } from '@/components';
 
 function PageLoader() {
@@ -15,9 +15,11 @@ export function AppProviders() {
   return (
     <ErrorBoundary>
       <AppContextProvider>
-        <Suspense fallback={<PageLoader />}>
-          <AppRouterProvider />
-        </Suspense>
+        <AuthProvider>
+          <Suspense fallback={<PageLoader />}>
+            <AppRouterProvider />
+          </Suspense>
+        </AuthProvider>
       </AppContextProvider>
     </ErrorBoundary>
   );

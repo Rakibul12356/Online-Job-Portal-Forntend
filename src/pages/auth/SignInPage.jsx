@@ -1,22 +1,52 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
+  Building2,
   Eye,
   EyeOff,
   Lock,
   LogIn,
   Mail,
   ShieldCheck,
+  User,
 } from 'lucide-react';
-import { ROUTES } from '@/constants';
+import { DUMMY_ACCOUNTS, ROUTES } from '@/constants';
+import { useAuth } from '@/context';
 
 export function SignInPage() {
+  const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [accountType, setAccountType] = useState('user');
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(ROUTES.DASHBOARD, { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   function handleSubmit(event) {
     event.preventDefault();
+    setError('');
+
+    const result = login(email, password);
+    if (result.success) {
+      navigate(ROUTES.DASHBOARD);
+      return;
+    }
+
+    setError(result.message);
+  }
+
+  function fillDummyCredentials(type) {
+    const account = DUMMY_ACCOUNTS[type];
+    setAccountType(type);
+    setEmail(account.email);
+    setPassword(account.password);
+    setError('');
   }
 
   return (
@@ -33,6 +63,39 @@ export function SignInPage() {
 
       <div className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm md:p-10">
         <form className="space-y-5" onSubmit={handleSubmit}>
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => fillDummyCredentials('user')}
+              className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                accountType === 'user'
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <User className="h-4 w-4" />
+              User
+            </button>
+            <button
+              type="button"
+              onClick={() => fillDummyCredentials('company')}
+              className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                accountType === 'company'
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <Building2 className="h-4 w-4" />
+              Company
+            </button>
+          </div>
+
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">
               Email Address <span className="text-red-500">*</span>
@@ -91,6 +154,13 @@ export function SignInPage() {
             Sign In
           </button>
         </form>
+
+        <p className="mt-4 text-center text-xs text-gray-400">
+          Demo User: {DUMMY_ACCOUNTS.user.email} / {DUMMY_ACCOUNTS.user.password}
+          <br />
+          Demo Company: {DUMMY_ACCOUNTS.company.email} /{' '}
+          {DUMMY_ACCOUNTS.company.password}
+        </p>
 
         <div className="relative my-8">
           <div className="absolute inset-0 flex items-center" aria-hidden="true">

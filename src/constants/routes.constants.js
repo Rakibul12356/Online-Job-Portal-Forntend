@@ -9,6 +9,7 @@ export const ROUTES = {
   SAVED_JOBS: '/saved-jobs',
   SIGN_IN: '/sign-in',
   REGISTER: '/register',
+  DASHBOARD: '/dashboard',
   NOT_FOUND: '*',
 };
 
