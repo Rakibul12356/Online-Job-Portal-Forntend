@@ -15,3 +15,6 @@ export const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'));
 export const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'));
 export const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'));
 export const EditProfilePage = lazy(() => import('@/pages/profile/EditProfilePage'));
+export const CompanySettingsPage = lazy(
+  () => import('@/pages/company/CompanySettingsPage'),
+);

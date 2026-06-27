@@ -182,15 +182,15 @@ export function Navbar() {
                     </Link>
                   )}
                   {isCompany && (
-                    <button
-                      type="button"
+                    <Link
+                      to={ROUTES.COMPANY_SETTINGS}
                       role="menuitem"
                       onClick={() => setIsProfileOpen(false)}
-                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
                     >
                       <Settings className="h-4 w-4" />
                       Company Settings
-                    </button>
+                    </Link>
                   )}
                   <button
                     type="button"

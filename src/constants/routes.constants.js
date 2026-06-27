@@ -11,6 +11,7 @@ export const ROUTES = {
   SIGN_IN: '/sign-in',
   REGISTER: '/register',
   DASHBOARD: '/dashboard',
+  COMPANY_SETTINGS: '/company/settings',
   NOT_FOUND: '*',
 };
 

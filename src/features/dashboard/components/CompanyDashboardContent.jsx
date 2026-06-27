@@ -1,5 +1,6 @@
 import {
   Briefcase,
+  Building2,
   Check,
   Clock,
   Download,
@@ -14,6 +15,8 @@ import {
   User,
   Users,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ROUTES } from '@/constants';
 import {
   companyStats,
   recentApplicants,
@@ -222,21 +225,36 @@ export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
                 { icon: Plus, label: 'Post New Job', primary: true },
                 { icon: List, label: 'Manage Jobs' },
                 { icon: Users, label: 'View Applicants' },
-                { icon: Settings, label: 'Company Settings' },
-              ].map(({ icon: Icon, label, primary }) => (
-                <button
-                  key={label}
-                  type="button"
-                  className={`flex w-full items-center justify-start rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                    primary
-                      ? 'bg-slate-900 text-white hover:bg-slate-800'
-                      : 'border border-gray-300 bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  <Icon className="mr-2 h-4 w-4" />
-                  {label}
-                </button>
-              ))}
+                {
+                  icon: Settings,
+                  label: 'Company Settings',
+                  to: ROUTES.COMPANY_SETTINGS,
+                },
+              ].map(({ icon: Icon, label, primary, to }) =>
+                to ? (
+                  <Link
+                    key={label}
+                    to={to}
+                    className="flex w-full items-center justify-start rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    {label}
+                  </Link>
+                ) : (
+                  <button
+                    key={label}
+                    type="button"
+                    className={`flex w-full items-center justify-start rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+                      primary
+                        ? 'bg-slate-900 text-white hover:bg-slate-800'
+                        : 'border border-gray-300 bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    {label}
+                  </button>
+                ),
+              )}
             </div>
           </div>
 
