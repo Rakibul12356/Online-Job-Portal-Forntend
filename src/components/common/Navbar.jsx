@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Briefcase, Building2, LogOut, Plus, Settings, User } from 'lucide-react';
+import { Briefcase, Building2, LogOut, Plus, User } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { useAuth } from '@/context';
 
@@ -183,13 +183,13 @@ export function Navbar() {
                   )}
                   {isCompany && (
                     <Link
-                      to={ROUTES.COMPANY_SETTINGS}
+                      to={ROUTES.COMPANY_PROFILE}
                       role="menuitem"
                       onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
                     >
-                      <Settings className="h-4 w-4" />
-                      Company Settings
+                      <Building2 className="h-4 w-4" />
+                      Company Profile
                     </Link>
                   )}
                   <button

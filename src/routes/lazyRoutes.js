@@ -18,6 +18,9 @@ export const EditProfilePage = lazy(() => import('@/pages/profile/EditProfilePag
 export const CompanySettingsPage = lazy(
   () => import('@/pages/company/CompanySettingsPage'),
 );
+export const CompanyProfilePage = lazy(
+  () => import('@/pages/company/CompanyProfilePage'),
+);
 export const CreateJobPage = lazy(() => import('@/pages/company/CreateJobPage'));
 export const ManageJobsPage = lazy(() => import('@/pages/company/ManageJobsPage'));
 export const CompanyApplicantsPage = lazy(

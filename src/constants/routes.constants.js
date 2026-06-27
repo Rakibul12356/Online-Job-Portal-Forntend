@@ -12,6 +12,7 @@ export const ROUTES = {
   REGISTER: '/register',
   DASHBOARD: '/dashboard',
   COMPANY_SETTINGS: '/company/settings',
+  COMPANY_PROFILE: '/company/profile',
   CREATE_JOB: '/company/jobs/create',
   MANAGE_JOBS: '/company/jobs',
   COMPANY_APPLICANTS: '/company/applicants',
