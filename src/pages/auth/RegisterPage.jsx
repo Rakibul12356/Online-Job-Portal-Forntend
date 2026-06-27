@@ -1,17 +1,52 @@
-import { Link } from 'react-router-dom';
-import { ROUTES } from '@/constants';
+import { useState } from 'react';
+import { Building2, UserPlus } from 'lucide-react';
+import { AccountTypeToggle } from './components/AccountTypeToggle';
+import {
+  EmployerHighlights,
+  EmployerRegisterForm,
+} from './components/EmployerRegisterForm';
+import {
+  JobSeekerHighlights,
+  JobSeekerRegisterForm,
+} from './components/JobSeekerRegisterForm';
 
 export function RegisterPage() {
+  const [accountType, setAccountType] = useState('job-seeker');
+  const isEmployer = accountType === 'employer';
+
   return (
-    <div className="mx-auto max-w-md text-center">
-      <h1 className="text-2xl font-bold">Sign Up</h1>
-      <p className="mt-2 text-gray-500">Registration page — coming soon.</p>
-      <Link
-        to={ROUTES.SIGN_IN}
-        className="mt-6 inline-block text-sm font-medium text-slate-900 hover:underline"
-      >
-        Back to Sign In
-      </Link>
+    <div className={`mx-auto ${isEmployer ? 'max-w-3xl' : 'max-w-2xl'}`}>
+      <div className="mb-8 text-center">
+        <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-900/10">
+          {isEmployer ? (
+            <Building2 className="h-8 w-8 text-slate-900" />
+          ) : (
+            <UserPlus className="h-8 w-8 text-slate-900" />
+          )}
+        </div>
+        <h1 className="mb-3 text-4xl font-bold tracking-tight">
+          {isEmployer ? 'Register Your Company' : 'Create Your Account'}
+        </h1>
+        <p className="text-lg text-gray-500">
+          {isEmployer
+            ? 'Start hiring top talent for your organization'
+            : 'Join thousands of professionals finding their dream jobs'}
+        </p>
+      </div>
+
+      <AccountTypeToggle accountType={accountType} onChange={setAccountType} />
+
+      {isEmployer ? (
+        <>
+          <EmployerRegisterForm />
+          <EmployerHighlights />
+        </>
+      ) : (
+        <>
+          <JobSeekerRegisterForm />
+          <JobSeekerHighlights />
+        </>
+      )}
     </div>
   );
 }
