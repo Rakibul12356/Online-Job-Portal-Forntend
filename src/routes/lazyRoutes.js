@@ -18,3 +18,4 @@ export const EditProfilePage = lazy(() => import('@/pages/profile/EditProfilePag
 export const CompanySettingsPage = lazy(
   () => import('@/pages/company/CompanySettingsPage'),
 );
+export const CreateJobPage = lazy(() => import('@/pages/company/CreateJobPage'));

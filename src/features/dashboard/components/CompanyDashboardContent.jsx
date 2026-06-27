@@ -222,7 +222,12 @@ export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
             <h3 className="mb-4 text-lg font-semibold">Quick Actions</h3>
             <div className="space-y-2">
               {[
-                { icon: Plus, label: 'Post New Job', primary: true },
+                {
+                  icon: Plus,
+                  label: 'Post New Job',
+                  primary: true,
+                  to: ROUTES.CREATE_JOB,
+                },
                 { icon: List, label: 'Manage Jobs' },
                 { icon: Users, label: 'View Applicants' },
                 {
@@ -235,7 +240,11 @@ export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
                   <Link
                     key={label}
                     to={to}
-                    className="flex w-full items-center justify-start rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
+                    className={`flex w-full items-center justify-start rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+                      primary
+                        ? 'bg-slate-900 text-white hover:bg-slate-800'
+                        : 'border border-gray-300 bg-white hover:bg-gray-50'
+                    }`}
                   >
                     <Icon className="mr-2 h-4 w-4" />
                     {label}

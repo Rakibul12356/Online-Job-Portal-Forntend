@@ -136,13 +136,13 @@ export function Navbar() {
 
           <div className="flex items-center gap-4">
             {isCompany && (
-              <button
-                type="button"
+              <Link
+                to={ROUTES.CREATE_JOB}
                 className="flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Post Job
-              </button>
+              </Link>
             )}
 
             <div ref={profileRef} className="relative">
