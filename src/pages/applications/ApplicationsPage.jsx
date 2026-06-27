@@ -1,10 +1,16 @@
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/context';
+import { ApplicationsContent } from '@/features/applications/components/ApplicationsContent';
+import { ROUTES } from '@/constants';
+
 export function ApplicationsPage() {
-  return (
-    <section>
-      <h1 className="text-2xl font-bold">Applications</h1>
-      <p className="mt-2 text-gray-600">Applications page — UI goes here.</p>
-    </section>
-  );
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to={ROUTES.SIGN_IN} replace />;
+  }
+
+  return <ApplicationsContent />;
 }
 
 export default ApplicationsPage;
