@@ -15,12 +15,12 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-8">
-          <button
-            type="button"
+          <Link
+            to={ROUTES.SIGN_IN}
             className="text-[15px] font-normal text-black transition-colors hover:text-gray-600"
           >
             Sign In
-          </button>
+          </Link>
           <button
             type="button"
             className="rounded-lg bg-slate-900 px-5 py-2.5 text-[15px] font-semibold text-white transition-colors hover:bg-slate-800"

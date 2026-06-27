@@ -8,6 +8,8 @@ import {
   CompaniesListPage,
   ApplicationsPage,
   NotFoundPage,
+  SignInPage,
+  RegisterPage,
 } from './lazyRoutes';
 
 export const router = createBrowserRouter([
@@ -22,6 +24,8 @@ export const router = createBrowserRouter([
           { path: ROUTES.JOB_DETAIL, Component: JobDetailPage },
           { path: ROUTES.COMPANIES, Component: CompaniesListPage },
           { path: ROUTES.APPLICATIONS, Component: ApplicationsPage },
+          { path: ROUTES.SIGN_IN, Component: SignInPage },
+          { path: ROUTES.REGISTER, Component: RegisterPage },
         ],
       },
       { path: ROUTES.NOT_FOUND, Component: NotFoundPage },

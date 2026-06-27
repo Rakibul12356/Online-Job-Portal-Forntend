@@ -7,6 +7,8 @@ export const ROUTES = {
   APPLICATIONS: '/applications',
   PROFILE: '/profile',
   SAVED_JOBS: '/saved-jobs',
+  SIGN_IN: '/sign-in',
+  REGISTER: '/register',
   NOT_FOUND: '*',
 };
 

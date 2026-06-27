@@ -10,4 +10,5 @@ export const ApplicationsPage = lazy(
   () => import('@/pages/applications/ApplicationsPage'),
 );
 export const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
-
+export const SignInPage = lazy(() => import('@/pages/auth/SignInPage'));
+export const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'));
