@@ -228,7 +228,11 @@ export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
                   primary: true,
                   to: ROUTES.CREATE_JOB,
                 },
-                { icon: List, label: 'Manage Jobs' },
+                {
+                  icon: List,
+                  label: 'Manage Jobs',
+                  to: ROUTES.MANAGE_JOBS,
+                },
                 { icon: Users, label: 'View Applicants' },
                 {
                   icon: Settings,

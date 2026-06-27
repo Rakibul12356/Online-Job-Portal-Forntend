@@ -13,6 +13,7 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   COMPANY_SETTINGS: '/company/settings',
   CREATE_JOB: '/company/jobs/create',
+  MANAGE_JOBS: '/company/jobs',
   NOT_FOUND: '*',
 };
 
