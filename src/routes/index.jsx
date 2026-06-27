@@ -12,6 +12,7 @@ import {
   RegisterPage,
   DashboardPage,
   ProfilePage,
+  EditProfilePage,
 } from './lazyRoutes';
 
 export const router = createBrowserRouter([
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.REGISTER, Component: RegisterPage },
           { path: ROUTES.DASHBOARD, Component: DashboardPage },
           { path: ROUTES.PROFILE, Component: ProfilePage },
+          { path: ROUTES.EDIT_PROFILE, Component: EditProfilePage },
         ],
       },
       { path: ROUTES.NOT_FOUND, Component: NotFoundPage },

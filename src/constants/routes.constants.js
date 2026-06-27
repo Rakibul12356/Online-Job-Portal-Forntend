@@ -6,6 +6,7 @@ export const ROUTES = {
   COMPANY_DETAIL: '/companies/:companyId',
   APPLICATIONS: '/applications',
   PROFILE: '/profile',
+  EDIT_PROFILE: '/profile/edit',
   SAVED_JOBS: '/saved-jobs',
   SIGN_IN: '/sign-in',
   REGISTER: '/register',

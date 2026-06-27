@@ -201,7 +201,7 @@ export function DashboardContent({ firstName = 'John' }) {
             <div className="space-y-2">
               {[
                 { icon: User, label: 'View Profile', to: ROUTES.PROFILE },
-                { icon: Edit, label: 'Edit Profile', to: '#' },
+                { icon: Edit, label: 'Edit Profile', to: ROUTES.EDIT_PROFILE },
                 {
                   icon: FileText,
                   label: 'My Applications',

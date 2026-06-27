@@ -54,13 +54,13 @@ export function ProfileContent({ user }) {
                   </span>
                 </div>
               </div>
-              <button
-                type="button"
+              <Link
+                to={ROUTES.EDIT_PROFILE}
                 className="flex items-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
               >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Profile
-              </button>
+              </Link>
             </div>
 
             <div className="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
