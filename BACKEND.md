@@ -3,11 +3,11 @@
 > **Purpose:** This document is the single source of truth for building a **production-grade Go + MongoDB REST API** that powers the existing React frontend (`job-portal`).
 >
 > **Important constraints for implementers:**
-> - **Do NOT use Docker / docker-compose.** Run Go API and MongoDB locally on the machine.
+> - **Do NOT use Docker / docker-compose.** Run Go API locally; use the **MongoDB Atlas URI** from Section 16.
 > - **Must ship a Postman collection** so every API can be tested in Postman without the frontend.
 >
 > Give this file to an AI (or a developer) and instruct:
-> *"Implement a production-grade Go (Gin) + MongoDB backend following BACKEND.md exactly — no Docker; local MongoDB; include Postman collection + environment so all APIs are testable in Postman; maintain folder structure, endpoints, models, middleware, seed data, and docs."*
+> *"Implement a production-grade Go (Gin) + MongoDB backend following BACKEND.md exactly — no Docker; use the Atlas MONGO_URI from Section 16; include Postman collection + environment so all APIs are testable in Postman; maintain folder structure, endpoints, models, middleware, seed data, and docs."*
 
 ---
 
@@ -931,27 +931,35 @@ go run scripts/seed.go
 | Tool | Purpose | Notes |
 |------|---------|-------|
 | **Go 1.22+** | Run API | https://go.dev/dl/ |
-| **MongoDB Community 7+** | Database | Install locally **or** use free **MongoDB Atlas** URI |
+| **MongoDB Atlas** | Database (already configured) | Connection string below — no local Mongo install needed |
 | **Postman** | API testing | https://www.postman.com/downloads/ |
 | **Git** | Version control | |
 
 **Do not use Docker** for this project.
 
-### MongoDB options
+### MongoDB connection (use this — no vejal)
 
-**Option A — Local MongoDB (Windows)**
+This project uses **MongoDB Atlas**. Put this exact URI in `.env` as `MONGO_URI`:
 
-1. Install MongoDB Community Server
-2. Ensure MongoDB service is running (default port `27017`)
-3. Optional GUI: MongoDB Compass → connect `mongodb://localhost:27017`
-4. Use URI: `mongodb://localhost:27017`
+```text
+mongodb+srv://Job_portal_db:rakib74@cluster0.j9djoaf.mongodb.net/?appName=Cluster0
+```
 
-**Option B — MongoDB Atlas (cloud, still no Docker)**
+| Field | Value |
+|-------|-------|
+| Cluster | `cluster0.j9djoaf.mongodb.net` |
+| Username | `Job_portal_db` |
+| Password | `rakib74` |
+| Database name | `job_portal` (`MONGO_DB`) |
+| App name | `Cluster0` |
 
-1. Create free cluster
-2. Allow network access (your IP)
-3. Create DB user
-4. Copy connection string into `.env` as `MONGO_URI`
+**Notes for implementers / AI:**
+
+1. Use this URI as the **default** in `.env.example` and README.
+2. Connect with official Go Mongo driver (`mongo.Connect` with this `MONGO_URI`).
+3. Database name = `job_portal` (separate from URI path — set via `MONGO_DB`).
+4. Atlas Network Access must allow the developer IP (or `0.0.0.0/0` for dev).
+5. Optional GUI: MongoDB Compass → paste the same URI.
 
 ### `.env.example`
 
@@ -960,12 +968,9 @@ APP_ENV=development
 APP_PORT=8080
 APP_BASE_URL=http://localhost:8080
 
-# Local MongoDB (default)
-MONGO_URI=mongodb://localhost:27017
+# MongoDB Atlas (required — use this connection)
+MONGO_URI=mongodb+srv://Job_portal_db:rakib74@cluster0.j9djoaf.mongodb.net/?appName=Cluster0
 MONGO_DB=job_portal
-
-# Or Atlas example:
-# MONGO_URI=mongodb+srv://USER:PASS@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
 
 JWT_ACCESS_SECRET=change-me-access-super-secret
 JWT_REFRESH_SECRET=change-me-refresh-super-secret
@@ -983,27 +988,25 @@ RATE_LIMIT_RPM=60
 ### Local run steps (developer / AI must document in README)
 
 ```bash
-# 1. Clone / open job-portal-api
+# 1. Open job-portal-api
 cd job-portal-api
 
-# 2. Copy env
+# 2. Copy env (already contains Atlas URI)
 cp .env.example .env
 
-# 3. Start MongoDB locally (Windows Services) OR use Atlas URI in .env
-
-# 4. Install deps
+# 3. Install deps
 go mod tidy
 
-# 5. Seed demo data
+# 4. Seed demo data into Atlas DB `job_portal`
 go run ./scripts/seed.go
 # or: make seed
 
-# 6. Run API
+# 5. Run API
 go run ./cmd/api
 # or: make run
 
-# 7. Verify
-# Browser or Postman: GET http://localhost:8080/health
+# 6. Verify
+# GET http://localhost:8080/health
 # Swagger: http://localhost:8080/swagger/index.html
 ```
 
@@ -1012,6 +1015,8 @@ API base for Postman:
 ```text
 http://localhost:8080/api/v1
 ```
+
+> **Security reminder:** This URI contains a DB password. Keep the backend repo private, or move secrets to a local `.env` that is gitignored and never commit real passwords to a public GitHub repo. For this project, `.env.example` may include the Atlas URI as the team default.
 
 ---
 
@@ -1283,8 +1288,9 @@ Whenever a new endpoint is added:
 The backend **must** ship with:
 
 1. **README.md**
-   - Prerequisites: Go, MongoDB (local or Atlas), Postman — **no Docker**
+   - Prerequisites: Go, MongoDB Atlas (URI in BACKEND.md), Postman — **no Docker**
    - Quick start: `cp .env.example .env` → `go run ./scripts/seed.go` → `go run ./cmd/api`
+   - Default `MONGO_URI` = Atlas connection from Section 16
    - Env vars table
    - Seed credentials
    - How to open Swagger
@@ -1379,13 +1385,15 @@ Document as TODO, do not block v1:
 github.com/<your-org>/job-portal-api
 ```
 
-## Appendix B — Local MongoDB Checklist (No Docker)
+## Appendix B — MongoDB Atlas Checklist (No Docker)
 
 ```text
-[ ] MongoDB installed OR Atlas cluster created
-[ ] Compass can connect (optional)
-[ ] .env MONGO_URI points to that instance
-[ ] go run ./scripts/seed.go succeeds
+[ ] .env has:
+      MONGO_URI=mongodb+srv://Job_portal_db:rakib74@cluster0.j9djoaf.mongodb.net/?appName=Cluster0
+      MONGO_DB=job_portal
+[ ] Atlas Network Access allows your IP
+[ ] Compass can connect with the same URI (optional)
+[ ] go run ./scripts/seed.go succeeds (writes to Atlas DB job_portal)
 [ ] go run ./cmd/api starts on :8080
 [ ] GET http://localhost:8080/health → 200
 [ ] Postman environment selected: Job Portal Local
