@@ -2,8 +2,12 @@
 
 > **Purpose:** This document is the single source of truth for building a **production-grade Go + MongoDB REST API** that powers the existing React frontend (`job-portal`).
 >
+> **Important constraints for implementers:**
+> - **Do NOT use Docker / docker-compose.** Run Go API and MongoDB locally on the machine.
+> - **Must ship a Postman collection** so every API can be tested in Postman without the frontend.
+>
 > Give this file to an AI (or a developer) and instruct:
-> *"Implement a production-grade Go (Gin/Fiber/Chi) + MongoDB backend following BACKEND.md exactly — maintain the folder structure, all endpoints, models, middleware, documentation, and seed data."*
+> *"Implement a production-grade Go (Gin) + MongoDB backend following BACKEND.md exactly — no Docker; local MongoDB; include Postman collection + environment so all APIs are testable in Postman; maintain folder structure, endpoints, models, middleware, seed data, and docs."*
 
 ---
 
@@ -24,11 +28,12 @@
 13. [Frontend Route ↔ API Mapping](#13-frontend-route--api-mapping)
 14. [Business Rules](#14-business-rules)
 15. [Seed / Demo Data](#15-seed--demo-data)
-16. [Environment & Config](#16-environment--config)
-17. [Documentation Requirements](#17-documentation-requirements)
-18. [Implementation Phases](#18-implementation-phases)
-19. [Non-Functional Requirements](#19-non-functional-requirements)
-20. [Out of Scope (v1) / Future](#20-out-of-scope-v1--future)
+16. [Environment & Local Run (No Docker)](#16-environment--local-run-no-docker)
+17. [Postman Collection & API Testing](#17-postman-collection--api-testing)
+18. [Documentation Requirements](#18-documentation-requirements)
+19. [Implementation Phases](#19-implementation-phases)
+20. [Non-Functional Requirements](#20-non-functional-requirements)
+21. [Out of Scope (v1) / Future](#21-out-of-scope-v1--future)
 
 ---
 
@@ -50,7 +55,9 @@
 - Hiring pipeline (shortlist / reject / interview)
 - File uploads (resume, avatar, company logo)
 - Pagination, filtering, sorting matching UI
-- Production structure: clean architecture, logging, validation, Swagger, Docker
+- Production structure: clean architecture, logging, validation, Swagger
+- **Local run only** (no Docker) — MongoDB Community / MongoDB Atlas + `go run`
+- **Postman collection** for testing every endpoint
 
 ### Suggested repo name
 
@@ -68,17 +75,18 @@ Keep this backend as a **separate repository** from the React frontend.
 |-------|--------|-------|
 | Language | **Go 1.22+** | |
 | HTTP framework | **Gin** (preferred) or Fiber/Chi | Keep consistent |
-| Database | **MongoDB 7+** | Official `go.mongodb.org/mongo-driver` |
+| Database | **MongoDB 7+** (local install or Atlas) | Official `go.mongodb.org/mongo-driver` |
 | Auth | **JWT** (access + refresh) | `golang-jwt/jwt` |
 | Password | **bcrypt** | cost ≥ 12 |
 | Validation | `go-playground/validator` | |
 | Config | `env` / `viper` | `.env` + defaults |
 | Logging | `slog` or `zap` | structured JSON in prod |
 | Docs | **Swagger / OpenAPI** | `swaggo/swag` |
-| File storage | Local `./uploads` (dev) + **S3-compatible** interface (prod) | abstract behind interface |
+| API testing | **Postman collection** (required) | `docs/postman/` |
+| File storage | Local `./uploads` | no Docker volumes |
 | Rate limiting | middleware | auth & apply endpoints |
 | CORS | configurable origins | frontend Vite URL |
-| Container | **Docker** + `docker-compose` (API + Mongo) | |
+| Container | **Not used** | Do not add Dockerfile / docker-compose |
 | Testing | `testify`, `httptest` | unit + integration |
 
 ---
@@ -92,10 +100,14 @@ job-portal-api/
 │       └── main.go                 # entrypoint
 ├── configs/
 │   └── config.yaml                 # optional defaults
-├── docs/                           # generated swagger
+├── docs/                           # generated swagger + Postman
 │   ├── docs.go
 │   ├── swagger.json
-│   └── swagger.yaml
+│   ├── swagger.yaml
+│   └── postman/
+│       ├── Job_Portal_API.postman_collection.json
+│       ├── Job_Portal_Local.postman_environment.json
+│       └── README.md               # how to import & test in Postman
 ├── internal/
 │   ├── config/
 │   │   └── config.go
@@ -161,13 +173,13 @@ job-portal-api/
 ├── uploads/                        # gitignored (dev local storage)
 ├── .env.example
 ├── .gitignore
-├── Dockerfile
-├── docker-compose.yml
 ├── go.mod
 ├── go.sum
-├── Makefile                        # run, test, swagger, seed
-└── README.md                       # how to run, env, API docs link
+├── Makefile                        # run, test, swagger, seed (no docker targets)
+└── README.md                       # local run + Postman + Swagger
 ```
+
+> **Do not create** `Dockerfile` or `docker-compose.yml` for this project.
 
 ### Layer rules (must follow)
 
@@ -912,7 +924,34 @@ go run scripts/seed.go
 
 ---
 
-## 16. Environment & Config
+## 16. Environment & Local Run (No Docker)
+
+### Prerequisites (install on your machine)
+
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| **Go 1.22+** | Run API | https://go.dev/dl/ |
+| **MongoDB Community 7+** | Database | Install locally **or** use free **MongoDB Atlas** URI |
+| **Postman** | API testing | https://www.postman.com/downloads/ |
+| **Git** | Version control | |
+
+**Do not use Docker** for this project.
+
+### MongoDB options
+
+**Option A — Local MongoDB (Windows)**
+
+1. Install MongoDB Community Server
+2. Ensure MongoDB service is running (default port `27017`)
+3. Optional GUI: MongoDB Compass → connect `mongodb://localhost:27017`
+4. Use URI: `mongodb://localhost:27017`
+
+**Option B — MongoDB Atlas (cloud, still no Docker)**
+
+1. Create free cluster
+2. Allow network access (your IP)
+3. Create DB user
+4. Copy connection string into `.env` as `MONGO_URI`
 
 ### `.env.example`
 
@@ -921,11 +960,15 @@ APP_ENV=development
 APP_PORT=8080
 APP_BASE_URL=http://localhost:8080
 
+# Local MongoDB (default)
 MONGO_URI=mongodb://localhost:27017
 MONGO_DB=job_portal
 
-JWT_ACCESS_SECRET=change-me-access
-JWT_REFRESH_SECRET=change-me-refresh
+# Or Atlas example:
+# MONGO_URI=mongodb+srv://USER:PASS@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+
+JWT_ACCESS_SECRET=change-me-access-super-secret
+JWT_REFRESH_SECRET=change-me-refresh-super-secret
 JWT_ACCESS_TTL=15m
 JWT_REFRESH_TTL=168h
 
@@ -933,30 +976,322 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:5174
 
 UPLOAD_DRIVER=local
 UPLOAD_DIR=./uploads
-# UPLOAD_DRIVER=s3
-# S3_BUCKET=
-# S3_REGION=
-# S3_ACCESS_KEY=
-# S3_SECRET_KEY=
 
 RATE_LIMIT_RPM=60
 ```
 
+### Local run steps (developer / AI must document in README)
+
+```bash
+# 1. Clone / open job-portal-api
+cd job-portal-api
+
+# 2. Copy env
+cp .env.example .env
+
+# 3. Start MongoDB locally (Windows Services) OR use Atlas URI in .env
+
+# 4. Install deps
+go mod tidy
+
+# 5. Seed demo data
+go run ./scripts/seed.go
+# or: make seed
+
+# 6. Run API
+go run ./cmd/api
+# or: make run
+
+# 7. Verify
+# Browser or Postman: GET http://localhost:8080/health
+# Swagger: http://localhost:8080/swagger/index.html
+```
+
+API base for Postman:
+
+```text
+http://localhost:8080/api/v1
+```
+
 ---
 
-## 17. Documentation Requirements
+## 17. Postman Collection & API Testing
+
+> **Required deliverable:** Ship a ready-to-import Postman collection so the developer can test **all APIs in Postman** without opening the React frontend.
+
+### 17.1 Files to create
+
+```text
+docs/postman/
+├── Job_Portal_API.postman_collection.json
+├── Job_Portal_Local.postman_environment.json
+└── README.md
+```
+
+### 17.2 Postman Environment variables
+
+Create environment **Job Portal Local** with:
+
+| Variable | Initial value | Description |
+|----------|---------------|-------------|
+| `baseUrl` | `http://localhost:8080/api/v1` | API prefix |
+| `accessToken` | *(empty)* | Set automatically after Login |
+| `refreshToken` | *(empty)* | Optional |
+| `seekerEmail` | `you@example.com` | Seed seeker |
+| `seekerPassword` | `password123` | |
+| `companyEmail` | `company@example.com` | Seed company |
+| `companyPassword` | `password123` | |
+| `jobId` | *(empty)* | Set after Create Job / List Jobs |
+| `applicationId` | *(empty)* | Set after Apply / List applications |
+| `companyId` | *(empty)* | From company login /me |
+
+### 17.3 Collection folder structure
+
+Organize the collection exactly like this:
+
+```text
+Job Portal API/
+├── 00 Health
+│   ├── GET Health
+│   └── GET Ready
+├── 01 Auth
+│   ├── POST Register Seeker
+│   ├── POST Register Employer
+│   ├── POST Login Seeker          ← saves accessToken
+│   ├── POST Login Company         ← saves accessToken
+│   ├── GET Me
+│   ├── POST Refresh
+│   └── POST Logout
+├── 02 Public Jobs
+│   ├── GET List Jobs
+│   ├── GET List Jobs (filters)
+│   ├── GET Job Detail
+│   └── GET Similar Jobs
+├── 03 Seeker — Apply & Applications
+│   ├── POST Apply to Job (multipart)
+│   ├── GET My Applications
+│   ├── GET Application by ID
+│   └── POST Withdraw Application
+├── 04 Seeker — Profile
+│   ├── GET Profile Me
+│   ├── PUT Profile Me
+│   ├── POST Upload Avatar
+│   ├── POST Upload Resume
+│   ├── POST Add Experience
+│   └── ...
+├── 05 Seeker — Saved Jobs & Dashboard
+│   ├── GET Saved Jobs
+│   ├── POST Save Job
+│   ├── DELETE Unsave Job
+│   └── GET Seeker Dashboard
+├── 06 Company — Jobs
+│   ├── GET Manage Jobs
+│   ├── POST Create Job (Publish)
+│   ├── POST Create Job (Draft)
+│   ├── PUT Update Job
+│   ├── POST Publish Job
+│   ├── POST Close Job
+│   ├── POST Reactivate Job
+│   ├── POST Bulk Actions
+│   └── DELETE Job
+├── 07 Company — Applicants
+│   ├── GET Applicants
+│   ├── GET Applicants (filters)
+│   ├── GET Applicant Detail
+│   ├── PATCH Shortlist
+│   ├── PATCH Reject
+│   └── GET Download Resume
+├── 08 Company — Profile & Settings
+│   ├── GET Company Profile
+│   ├── GET Company Settings
+│   ├── PUT Company Settings
+│   ├── POST Upload Logo
+│   └── GET Company Dashboard
+└── 09 Public Companies
+    ├── GET Companies List
+    └── GET Company by ID
+```
+
+### 17.4 Auth header (every protected request)
+
+In collection **Authorization** tab (or folder level):
+
+- Type: **Bearer Token**
+- Token: `{{accessToken}}`
+
+Public folders (`00 Health`, `02 Public Jobs`, register/login) = **No Auth**.
+
+### 17.5 Auto-save token after Login (Tests script)
+
+Add this to **Login Seeker** and **Login Company** → Tests tab:
+
+```javascript
+if (pm.response.code === 200) {
+  const json = pm.response.json();
+  const data = json.data || json;
+  if (data.accessToken) {
+    pm.environment.set("accessToken", data.accessToken);
+  }
+  if (data.refreshToken) {
+    pm.environment.set("refreshToken", data.refreshToken);
+  }
+  if (data.user && data.user.companyId) {
+    pm.environment.set("companyId", data.user.companyId);
+  }
+  if (data.user && data.user.id) {
+    pm.environment.set("userId", data.user.id);
+  }
+}
+```
+
+After **Create Job** / **List Jobs**, save `jobId`:
+
+```javascript
+if (pm.response.code === 200 || pm.response.code === 201) {
+  const json = pm.response.json();
+  const data = json.data || json;
+  if (data.id) pm.environment.set("jobId", data.id);
+  if (data.items && data.items[0]) pm.environment.set("jobId", data.items[0].id);
+}
+```
+
+### 17.6 Example Postman requests
+
+#### Login Seeker
+
+```http
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{seekerEmail}}",
+  "password": "{{seekerPassword}}"
+}
+```
+
+#### Login Company
+
+```http
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{companyEmail}}",
+  "password": "{{companyPassword}}"
+}
+```
+
+#### List Jobs
+
+```http
+GET {{baseUrl}}/jobs?page=1&limit=10&sort=newest
+```
+
+#### Create Job (Company token required)
+
+```http
+POST {{baseUrl}}/company/jobs
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Senior Full Stack Developer",
+  "jobType": "full-time",
+  "workMode": "remote",
+  "category": "engineering",
+  "experienceLevel": "senior",
+  "location": "San Francisco",
+  "salaryMin": 120000,
+  "salaryMax": 180000,
+  "salaryPeriod": "yearly",
+  "description": "Build scalable web apps with React and Node.js.",
+  "requirements": "5+ years experience",
+  "benefits": "Health, remote stipend",
+  "skills": ["JavaScript", "React", "Node.js"],
+  "vacancies": 1,
+  "deadline": "2026-12-31",
+  "status": "active"
+}
+```
+
+#### Apply to Job (multipart form-data)
+
+```http
+POST {{baseUrl}}/jobs/{{jobId}}/applications
+Authorization: Bearer {{accessToken}}
+```
+
+Body type: **form-data**
+
+| Key | Type | Value |
+|-----|------|-------|
+| `resume` | File | select a PDF ≤ 5MB |
+| `coverMessage` | Text | `I am excited to apply...` |
+
+#### Shortlist Applicant
+
+```http
+PATCH {{baseUrl}}/company/applicants/{{applicationId}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "status": "shortlisted"
+}
+```
+
+### 17.7 Recommended Postman test order
+
+Follow this order so IDs and tokens exist:
+
+1. `GET /health`
+2. **Login Seeker** → token saved
+3. `GET /auth/me`
+4. `GET /jobs` → copy/save `jobId`
+5. `GET /jobs/{{jobId}}`
+6. **Apply** (multipart) with seeker token
+7. `GET /applications/me`
+8. **Login Company** → token overwritten with company token
+9. `GET /company/jobs`
+10. `POST /company/jobs` (create)
+11. `GET /company/applicants`
+12. `PATCH` shortlist / reject
+13. `GET /company/settings` → `PUT` update
+14. `GET /dashboard/company` and `GET /dashboard/seeker` (login switch as needed)
+
+### 17.8 `docs/postman/README.md` must include
+
+1. How to import collection + environment into Postman  
+2. How to select environment **Job Portal Local**  
+3. How to start API locally (`go run ./cmd/api`)  
+4. Seed credentials table  
+5. Test order (section 17.7)  
+6. Note: multipart Apply needs a real PDF file attached in Postman  
+
+### 17.9 Export / maintain rule
+
+Whenever a new endpoint is added:
+
+1. Add it to Swagger  
+2. Add matching Postman request in the correct folder  
+3. Update this BACKEND.md catalog if needed  
+
+---
+
+## 18. Documentation Requirements
 
 The backend **must** ship with:
 
 1. **README.md**
-   - Prerequisites (Go, Mongo, Docker)
-   - Quick start (`docker-compose up`, `make run`)
+   - Prerequisites: Go, MongoDB (local or Atlas), Postman — **no Docker**
+   - Quick start: `cp .env.example .env` → `go run ./scripts/seed.go` → `go run ./cmd/api`
    - Env vars table
    - Seed credentials
    - How to open Swagger
+   - How to import & use Postman collection
 2. **Swagger UI** at `/swagger/index.html`
 3. **This BACKEND.md** copied or linked into `docs/BACKEND.md`
-4. **Postman / Bruno collection** (optional but recommended) under `docs/postman/`
+4. **Postman collection + environment** under `docs/postman/` (**required**, not optional)
 5. **Architecture section** in README: request flow Handler → Service → Repository
 
 ### Swagger annotations
@@ -965,44 +1300,48 @@ Annotate every public handler with summary, params, security, success/error resp
 
 ---
 
-## 18. Implementation Phases
+## 19. Implementation Phases
 
 ### Phase 1 — Foundation
 - Folder structure, config, Mongo connection, indexes
 - Response helpers, middleware, health
 - Auth: register seeker/employer, login, me, JWT
 - Seed users
+- Postman: Health + Auth folders
 
 ### Phase 2 — Jobs (public + company)
 - CRUD company jobs
 - Public list/detail/similar
 - Manage jobs filters + pagination
 - Publish / close / reactivate / bulk
+- Postman: Public Jobs + Company Jobs folders
 
 ### Phase 3 — Applications
 - Apply multipart
 - Seeker applications list + withdraw
 - Company applicants + status updates + resume download
+- Postman: Apply, Applications, Applicants (incl. form-data example)
 
 ### Phase 4 — Profiles
 - Seeker profile CRUD + avatar/resume
 - Company settings + logo
 - Company public profile + open positions
+- Postman: Profile + Settings folders
 
 ### Phase 5 — Dashboards & saved jobs
 - Seeker & company dashboard aggregations
 - Saved jobs endpoints
+- Complete Postman collection coverage check
 
-### Phase 6 — Production hardening
-- Docker compose
+### Phase 6 — Hardening (still no Docker)
 - Rate limit, logging, graceful shutdown
 - Swagger polish
 - Integration tests
-- S3 storage adapter
+- Optional S3 storage adapter later
 
 ---
 
-## 19. Non-Functional Requirements
+## 20. Non-Functional Requirements
 
 | Area | Requirement |
 |------|-------------|
@@ -1014,13 +1353,15 @@ Annotate every public handler with summary, params, security, success/error resp
 | Graceful shutdown | Drain HTTP, disconnect Mongo |
 | Timezone | Store UTC; format labels in service or leave ISO for frontend |
 | Soft deletes | Prefer `deletedAt` on jobs/users if needed |
+| API testing | All endpoints importable & runnable via Postman |
 
 ---
 
-## 20. Out of Scope (v1) / Future
+## 21. Out of Scope (v1) / Future
 
 Document as TODO, do not block v1:
 
+- **Docker / docker-compose** (explicitly out of scope for this project)
 - OAuth (Google/GitHub) — frontend shows “Or continue with”
 - Billing / Preferences / Account Security settings sections
 - Email notifications (application received, shortlisted)
@@ -1038,21 +1379,17 @@ Document as TODO, do not block v1:
 github.com/<your-org>/job-portal-api
 ```
 
-## Appendix B — Docker Compose Sketch
+## Appendix B — Local MongoDB Checklist (No Docker)
 
-```yaml
-services:
-  mongo:
-    image: mongo:7
-    ports: ["27017:27017"]
-    volumes: ["mongo_data:/data/db"]
-  api:
-    build: .
-    ports: ["8080:8080"]
-    env_file: .env
-    depends_on: [mongo]
-volumes:
-  mongo_data:
+```text
+[ ] MongoDB installed OR Atlas cluster created
+[ ] Compass can connect (optional)
+[ ] .env MONGO_URI points to that instance
+[ ] go run ./scripts/seed.go succeeds
+[ ] go run ./cmd/api starts on :8080
+[ ] GET http://localhost:8080/health → 200
+[ ] Postman environment selected: Job Portal Local
+[ ] Postman Login Seeker → accessToken auto-filled
 ```
 
 ## Appendix C — Makefile Targets
@@ -1070,8 +1407,7 @@ swagger:
 seed:
 	go run ./scripts/seed.go
 
-docker-up:
-	docker compose up --build
+# No docker targets — this project runs locally only
 ```
 
 ## Appendix D — Frontend Integration Checklist
@@ -1155,4 +1491,4 @@ type Application struct {
 
 **End of specification.**
 
-Implementers / AI agents: follow this document literally for folder structure, endpoints, enums, auth, and documentation. Prefer clarity and production patterns over shortcuts.
+Implementers / AI agents: follow this document literally for folder structure, endpoints, enums, auth, **Postman collection**, and documentation. **Do not use Docker.** Prefer clarity and production patterns over shortcuts. Run locally with Go + MongoDB and verify every endpoint in Postman.
