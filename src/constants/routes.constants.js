@@ -16,6 +16,7 @@ export const ROUTES = {
   CREATE_JOB: '/company/jobs/create',
   MANAGE_JOBS: '/company/jobs',
   COMPANY_APPLICANTS: '/company/applicants',
+  CHAT: '/chat',
   NOT_FOUND: '*',
 };
 
@@ -26,6 +27,7 @@ export const ROUTE_LABELS = {
   [ROUTES.APPLICATIONS]: 'Applications',
   [ROUTES.PROFILE]: 'Profile',
   [ROUTES.SAVED_JOBS]: 'Saved Jobs',
+  [ROUTES.CHAT]: 'Messages',
 };
 
 export default ROUTES;

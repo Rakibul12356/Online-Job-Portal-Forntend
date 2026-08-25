@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Briefcase,
   Calendar,
@@ -9,9 +9,10 @@ import {
   Mail,
   UserCheck,
   XCircle,
+  MessageSquare,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
-import { employerService } from '@/services';
+import { employerService, chatService } from '@/services';
 import { LoadingSpinner } from '@/components';
 import { sanitizeMediaUrl } from '@/config/env';
 import { useToast } from '@/context';
@@ -42,6 +43,7 @@ const statusLabels = {
 
 export function CompanyApplicantsContent() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [statusFilters, setStatusFilters] = useState(defaultStatusFilters);
   const [experienceFilters, setExperienceFilters] = useState(defaultExperienceFilters);
   const [dateFilter, setDateFilter] = useState(defaultDateFilter);
@@ -50,6 +52,25 @@ export function CompanyApplicantsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updatingAppId, setUpdatingAppId] = useState(null);
+  const [chatLoadingId, setChatLoadingId] = useState(null);
+
+  const handleChatWithCandidate = async (applicant) => {
+    const jobId = applicant.jobId || (applicant.job && applicant.job.id) || '1';
+    const seekerId = applicant.seekerId || applicant.userId || applicant.id;
+    
+    setChatLoadingId(applicant.id);
+    try {
+      const response = await chatService.getOrCreateRoom(jobId, seekerId);
+      if (response.success && response.data) {
+        navigate(`${ROUTES.CHAT}?room=${response.data.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to start chat with candidate:', err);
+      toast.error('Could not initiate chat with candidate.');
+    } finally {
+      setChatLoadingId(null);
+    }
+  };
 
   const fetchApplicants = async () => {
     setLoading(true);
@@ -310,6 +331,19 @@ export function CompanyApplicantsContent() {
                               View Resume
                             </a>
                           )}
+                          <button
+                            type="button"
+                            disabled={chatLoadingId !== null}
+                            onClick={() => handleChatWithCandidate(applicant)}
+                            className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium hover:bg-gray-50 text-slate-900 disabled:opacity-50"
+                          >
+                            {chatLoadingId === applicant.id ? (
+                              <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-slate-900 border-t-transparent" />
+                            ) : (
+                              <MessageSquare className="mr-2 h-3 w-3" />
+                            )}
+                            Chat
+                          </button>
                           {status === 'pending' && (
                             <>
                               <button

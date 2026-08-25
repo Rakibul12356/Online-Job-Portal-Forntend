@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Calendar,
   Flag,
@@ -8,13 +9,37 @@ import {
   Share2,
   Users,
   Building2,
+  MessageSquare,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants';
+import { useAuth } from '@/context';
+import { chatService } from '@/services';
 
 export function JobDetailSidebar({ job, onApply }) {
   const Icon = job.icon || Building2;
   const companyInfo = job.companyInfo || {};
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const handleChatWithEmployer = async () => {
+    if (!isAuthenticated) {
+      navigate(ROUTES.SIGN_IN);
+      return;
+    }
+    setChatLoading(true);
+    try {
+      const response = await chatService.getOrCreateRoom(job.id);
+      if (response.success && response.data) {
+        navigate(`${ROUTES.CHAT}?room=${response.data.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to start chat with employer:', err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -33,6 +58,22 @@ export function JobDetailSidebar({ job, onApply }) {
             <Send className="h-4 w-4" />
             Apply Now
           </button>
+
+          {user?.role !== 'company' && (
+            <button
+              type="button"
+              disabled={chatLoading}
+              onClick={handleChatWithEmployer}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-slate-800 transition-colors hover:bg-gray-50 disabled:opacity-75 disabled:cursor-not-allowed"
+            >
+              {chatLoading ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-transparent" />
+              ) : (
+                <MessageSquare className="h-4 w-4" />
+              )}
+              Chat with Employer
+            </button>
+          )}
 
           <div className="space-y-3 border-t border-gray-200 pt-4">
             <div className="flex items-center justify-between text-sm">

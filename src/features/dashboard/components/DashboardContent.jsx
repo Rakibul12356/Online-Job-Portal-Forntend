@@ -11,6 +11,7 @@ import {
   Settings,
   User,
   Briefcase,
+  MessageSquare,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { seekerService } from '@/services';
@@ -268,6 +269,7 @@ export function DashboardContent({ firstName = 'User' }) {
                   to: ROUTES.APPLICATIONS,
                 },
                 { icon: Bookmark, label: 'Saved Jobs', to: ROUTES.SAVED_JOBS },
+                { icon: MessageSquare, label: 'Messages', to: ROUTES.CHAT },
                 { icon: Settings, label: 'Settings', to: '#' },
               ].map(({ icon: Icon, label, to }) => (
                 <Link

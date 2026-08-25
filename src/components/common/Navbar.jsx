@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Briefcase, Building2, LogOut, Plus, User } from 'lucide-react';
+import { Briefcase, Building2, LogOut, Plus, User, Menu, X } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { useAuth } from '@/context';
 
@@ -8,12 +8,14 @@ const userNavLinks = [
   { to: ROUTES.HOME, label: 'Jobs' },
   { to: ROUTES.DASHBOARD, label: 'Dashboard' },
   { to: ROUTES.APPLICATIONS, label: 'My Applications' },
+  { to: ROUTES.CHAT, label: 'Messages' },
 ];
 
 const companyNavLinks = [
   { to: ROUTES.DASHBOARD, label: 'Dashboard' },
   { to: ROUTES.MANAGE_JOBS, label: 'Manage Jobs' },
   { to: ROUTES.COMPANY_APPLICANTS, label: 'Applicants' },
+  { to: ROUTES.CHAT, label: 'Messages' },
 ];
 
 export function Navbar() {
@@ -21,9 +23,25 @@ export function Navbar() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const profileRef = useRef(null);
   const isSignInPage = pathname === ROUTES.SIGN_IN;
   const isRegisterPage = pathname === ROUTES.REGISTER;
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -104,7 +122,7 @@ export function Navbar() {
               <Briefcase className="h-8 w-8 text-slate-900" strokeWidth={2} />
               <span className="text-xl font-bold">Online Job Portal</span>
             </Link>
-            <div className="hidden items-center gap-6 md:flex">
+            <div className="hidden items-center gap-6 lg:flex">
               {navLinks.map(({ to, label }) =>
                 to.startsWith('#') ? (
                   <button
@@ -122,7 +140,7 @@ export function Navbar() {
                     className={({ isActive }) =>
                       `text-sm font-medium transition-colors ${
                         isActive
-                          ? 'text-slate-900'
+                          ? 'text-slate-900 font-semibold'
                           : 'text-gray-500 hover:text-slate-900'
                       }`
                     }
@@ -134,18 +152,18 @@ export function Navbar() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {isCompany && (
               <Link
                 to={ROUTES.CREATE_JOB}
-                className="flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                className="hidden sm:flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Post Job
               </Link>
             )}
 
-            <div ref={profileRef} className="relative">
+            <div ref={profileRef} className="relative hidden lg:block">
               <button
                 type="button"
                 onClick={() => setIsProfileOpen((open) => !open)}
@@ -160,7 +178,7 @@ export function Navbar() {
                     <User className="h-4 w-4 text-slate-900" />
                   )}
                 </div>
-                <span className="hidden text-sm font-medium md:inline">
+                <span className="text-sm font-medium">
                   {user?.name}
                 </span>
               </button>
@@ -204,8 +222,99 @@ export function Navbar() {
                 </div>
               )}
             </div>
+
+            {/* Hamburger Button for mobile menu */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 lg:hidden"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6 text-slate-900" />
+              ) : (
+                <Menu className="h-6 w-6 text-slate-900" />
+              )}
+            </button>
           </div>
         </nav>
+
+        {/* Mobile menu dropdown */}
+        {isMobileMenuOpen && (
+          <div className="absolute top-16 left-0 right-0 z-50 border-t border-gray-100 bg-white px-6 py-5 shadow-lg lg:hidden transition-all duration-300 animate-slide-down">
+            <div className="flex flex-col gap-4">
+              {navLinks.map(({ to, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === ROUTES.HOME}
+                  className={({ isActive }) =>
+                    `block py-1.5 text-base font-semibold transition-colors ${
+                      isActive ? 'text-slate-900' : 'text-gray-500 hover:text-slate-900'
+                    }`
+                  }
+                >
+                  {label}
+                </NavLink>
+              ))}
+
+              {isCompany && (
+                <Link
+                  to={ROUTES.CREATE_JOB}
+                  className="flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-base font-semibold text-white transition-colors hover:bg-slate-800 mt-2"
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Post Job
+                </Link>
+              )}
+
+              <hr className="border-gray-100 my-2" />
+
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3 px-1 py-1">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 shrink-0">
+                    {isCompany ? (
+                      <Building2 className="h-5 w-5 text-slate-900" />
+                    ) : (
+                      <User className="h-5 w-5 text-slate-900" />
+                    )}
+                  </div>
+                  <span className="text-sm font-bold text-gray-800 truncate">
+                    {user?.name}
+                  </span>
+                </div>
+
+                {!isCompany && (
+                  <Link
+                    to={ROUTES.PROFILE}
+                    className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <User className="h-4 w-4" />
+                    Profile
+                  </Link>
+                )}
+                {isCompany && (
+                  <Link
+                    to={ROUTES.COMPANY_PROFILE}
+                    className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Company Profile
+                  </Link>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
     );
   }

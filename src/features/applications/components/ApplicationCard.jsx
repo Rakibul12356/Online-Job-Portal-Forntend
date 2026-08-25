@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Briefcase,
   Clock,
@@ -6,8 +7,10 @@ import {
   Eye,
   MapPin,
   X,
+  MessageSquare,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
+import { chatService } from '@/services';
 
 const statusBadgeStyles = {
   pending: 'bg-amber-100 text-amber-800 border border-amber-200',
@@ -26,6 +29,23 @@ const statusLabels = {
 };
 
 export function ApplicationCard({ application, onWithdraw, isWithdrawing }) {
+  const navigate = useNavigate();
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const handleChatWithEmployer = async () => {
+    setChatLoading(true);
+    try {
+      const response = await chatService.getOrCreateRoom(application.jobId);
+      if (response.success && response.data) {
+        navigate(`${ROUTES.CHAT}?room=${response.data.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to start chat with employer:', err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   const Icon = application.icon || Briefcase;
   const title = application.jobTitle || application.title || 'Job Position';
   const company = application.company;
@@ -109,6 +129,21 @@ export function ApplicationCard({ application, onWithdraw, isWithdrawing }) {
                 <Eye className="mr-2 h-4 w-4" />
                 View Job
               </Link>
+              {status !== 'withdrawn' && (
+                <button
+                  type="button"
+                  disabled={chatLoading}
+                  onClick={handleChatWithEmployer}
+                  className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium transition-colors hover:bg-gray-50 text-slate-800 disabled:opacity-75 disabled:cursor-not-allowed"
+                >
+                  {chatLoading ? (
+                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border border-slate-500 border-t-transparent" />
+                  ) : (
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                  )}
+                  Chat
+                </button>
+              )}
               {showWithdraw && (
                 <button
                   type="button"

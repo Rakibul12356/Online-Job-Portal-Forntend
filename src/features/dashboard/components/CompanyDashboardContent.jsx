@@ -16,6 +16,7 @@ import {
   User,
   Users,
   X,
+  MessageSquare,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants';
@@ -320,6 +321,11 @@ export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
                   to: ROUTES.MANAGE_JOBS,
                 },
                 { icon: Users, label: 'View Applicants', to: ROUTES.COMPANY_APPLICANTS },
+                {
+                  icon: MessageSquare,
+                  label: 'Messages / Inbox',
+                  to: ROUTES.CHAT,
+                },
                 {
                   icon: Settings,
                   label: 'Company Settings',
