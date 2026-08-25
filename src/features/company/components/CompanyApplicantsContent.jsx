@@ -14,6 +14,7 @@ import { ROUTES } from '@/constants';
 import { employerService } from '@/services';
 import { LoadingSpinner } from '@/components';
 import { sanitizeMediaUrl } from '@/config/env';
+import { useToast } from '@/context';
 import {
   dateFilterOptions,
   defaultDateFilter,
@@ -40,6 +41,7 @@ const statusLabels = {
 };
 
 export function CompanyApplicantsContent() {
+  const toast = useToast();
   const [statusFilters, setStatusFilters] = useState(defaultStatusFilters);
   const [experienceFilters, setExperienceFilters] = useState(defaultExperienceFilters);
   const [dateFilter, setDateFilter] = useState(defaultDateFilter);
@@ -47,6 +49,7 @@ export function CompanyApplicantsContent() {
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [updatingAppId, setUpdatingAppId] = useState(null);
 
   const fetchApplicants = async () => {
     setLoading(true);
@@ -106,14 +109,17 @@ export function CompanyApplicantsContent() {
 
   const handleUpdateStatus = async (appId, statusVal) => {
     if (!window.confirm(`Are you sure you want to mark this candidate as ${statusVal}?`)) return;
+    setUpdatingAppId(appId);
     try {
       const response = await employerService.updateApplicantStatus(appId, statusVal);
       if (response.success) {
-        alert(`Candidate marked as ${statusVal}!`);
+        toast.success(`Candidate marked as ${statusVal}!`);
         fetchApplicants();
       }
     } catch (err) {
-      alert(err.message || 'Failed to update applicant status');
+      toast.error(err.message || 'Failed to update applicant status');
+    } finally {
+      setUpdatingAppId(null);
     }
   };
 
@@ -308,18 +314,28 @@ export function CompanyApplicantsContent() {
                             <>
                               <button
                                 type="button"
+                                disabled={updatingAppId !== null}
                                 onClick={() => handleUpdateStatus(applicant.id, 'shortlisted')}
-                                className="flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800"
+                                className="flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
                               >
-                                <UserCheck className="mr-2 h-3 w-3" />
+                                {updatingAppId === applicant.id ? (
+                                  <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
+                                ) : (
+                                  <UserCheck className="mr-2 h-3 w-3" />
+                                )}
                                 Shortlist
                               </button>
                               <button
                                 type="button"
+                                disabled={updatingAppId !== null}
                                 onClick={() => handleUpdateStatus(applicant.id, 'interviewed')}
-                                className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium hover:bg-gray-50 text-slate-900"
+                                className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium hover:bg-gray-50 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <Calendar className="mr-2 h-3 w-3" />
+                                {updatingAppId === applicant.id ? (
+                                  <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-slate-900 border-t-transparent" />
+                                ) : (
+                                  <Calendar className="mr-2 h-3 w-3" />
+                                )}
                                 Schedule Interview
                               </button>
                             </>
@@ -327,20 +343,30 @@ export function CompanyApplicantsContent() {
                           {status === 'shortlisted' && (
                             <button
                               type="button"
+                              disabled={updatingAppId !== null}
                               onClick={() => handleUpdateStatus(applicant.id, 'interviewed')}
-                              className="flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800"
+                              className="flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
                             >
-                              <Calendar className="mr-2 h-3 w-3" />
+                              {updatingAppId === applicant.id ? (
+                                <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
+                              ) : (
+                                <Calendar className="mr-2 h-3 w-3" />
+                              )}
                               Interview Seeker
                             </button>
                           )}
                           {status !== 'rejected' && status !== 'withdrawn' && (
                             <button
                               type="button"
+                              disabled={updatingAppId !== null}
                               onClick={() => handleUpdateStatus(applicant.id, 'rejected')}
-                              className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium text-red-600 hover:bg-red-50"
+                              className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <XCircle className="mr-2 h-3 w-3" />
+                              {updatingAppId === applicant.id ? (
+                                <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-red-600 border-t-transparent" />
+                              ) : (
+                                <XCircle className="mr-2 h-3 w-3" />
+                              )}
                               Reject
                             </button>
                           )}

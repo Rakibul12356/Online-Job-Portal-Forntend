@@ -22,8 +22,11 @@ import {
 import { ROUTES } from '@/constants';
 import { seekerService } from '@/services';
 import { sanitizeMediaUrl } from '@/config/env';
+import { useToast } from '@/context';
+
 
 export function ProfileContent({ user, profile }) {
+  const toast = useToast();
   const displayName = profile.name || user?.name || 'Job Seeker';
   const displayEmail = profile.email || user?.email || '';
   
@@ -45,11 +48,11 @@ export function ProfileContent({ user, profile }) {
     try {
       const response = await seekerService.uploadResume(file);
       if (response.success) {
-        alert('Resume uploaded successfully!');
-        window.location.reload();
+        toast.success('Resume uploaded successfully!');
+        setTimeout(() => window.location.reload(), 1000);
       }
     } catch (err) {
-      alert(err.message || 'Failed to upload resume');
+      toast.error(err.message || 'Failed to upload resume');
     } finally {
       setResumeLoading(false);
     }
@@ -62,11 +65,11 @@ export function ProfileContent({ user, profile }) {
     try {
       const response = await seekerService.uploadAvatar(file);
       if (response.success) {
-        alert('Avatar uploaded successfully!');
-        window.location.reload();
+        toast.success('Avatar uploaded successfully!');
+        setTimeout(() => window.location.reload(), 1000);
       }
     } catch (err) {
-      alert(err.message || 'Failed to upload avatar');
+      toast.error(err.message || 'Failed to upload avatar');
     } finally {
       setAvatarLoading(false);
     }
@@ -103,7 +106,11 @@ export function ProfileContent({ user, profile }) {
               className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-slate-900 transition-transform hover:scale-105 cursor-pointer disabled:opacity-50"
               title="Upload new avatar"
             >
-              <Camera className="h-5 w-5 text-white" />
+              {avatarLoading ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <Camera className="h-5 w-5 text-white" />
+              )}
             </button>
           </div>
 
@@ -309,9 +316,13 @@ export function ProfileContent({ user, profile }) {
                 type="button"
                 onClick={() => resumeInputRef.current?.click()}
                 disabled={resumeLoading}
-                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50 cursor-pointer disabled:opacity-50"
+                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Upload className="mr-2 h-4 w-4" />
+                {resumeLoading ? (
+                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
                 {resumeLoading ? 'Uploading...' : profile.resume?.url ? 'Update Resume' : 'Upload Resume'}
               </button>
             </div>

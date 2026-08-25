@@ -4,6 +4,7 @@ import { ChevronRight, Plus, Send, X } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { employerService } from '@/services';
 import { LoadingSpinner } from '@/components';
+import { useToast } from '@/context';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900';
@@ -12,6 +13,7 @@ const defaultSkills = ['JavaScript', 'React', 'Node.js', 'MongoDB', 'AWS'];
 
 export function CreateJobContent() {
   const navigate = useNavigate();
+  const toast = useToast();
   const editJobId = new URLSearchParams(window.location.search).get('edit');
 
   const [skills, setSkills] = useState(defaultSkills);
@@ -25,8 +27,8 @@ export function CreateJobContent() {
     jobType: '',
     workMode: '',
     category: '',
-    experience: '',
-    city: '',
+    experienceLevel: '',
+    location: '',
     salaryMin: '',
     salaryMax: '',
     salaryPeriod: 'yearly',
@@ -51,8 +53,8 @@ export function CreateJobContent() {
               jobType: job.jobType || '',
               workMode: job.workMode || '',
               category: job.category || '',
-              experience: job.experience || '',
-              city: job.city || '',
+              experienceLevel: job.experienceLevel || job.experience || '',
+              location: job.location || job.city || '',
               salaryMin: job.salaryMin || '',
               salaryMax: job.salaryMax || '',
               salaryPeriod: job.salaryPeriod || 'yearly',
@@ -112,8 +114,8 @@ export function CreateJobContent() {
       jobType: form.jobType,
       workMode: form.workMode,
       category: form.category,
-      experience: form.experience,
-      city: form.city,
+      experienceLevel: form.experienceLevel,
+      location: form.location,
       salaryMin: form.salaryMin ? Number(form.salaryMin) : undefined,
       salaryMax: form.salaryMax ? Number(form.salaryMax) : undefined,
       salaryPeriod: form.salaryPeriod,
@@ -134,14 +136,18 @@ export function CreateJobContent() {
       }
 
       if (result.success) {
-        alert(editJobId ? 'Job updated successfully!' : 'Job posted successfully!');
+        toast.success(editJobId ? 'Job updated successfully!' : 'Job posted successfully!');
         navigate(ROUTES.MANAGE_JOBS);
       } else {
-        setError(result.message || 'Failed to submit job posting');
+        const msg = result.message || 'Failed to submit job posting';
+        setError(msg);
+        toast.error(msg);
       }
     } catch (err) {
       console.error('Error submitting job:', err);
-      setError(err.message || 'Error occurred while saving job post');
+      const msg = err.message || 'Error occurred while saving job post';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -271,30 +277,32 @@ export function CreateJobContent() {
                 </label>
                 <select
                   id="experience"
-                  value={form.experience}
-                  onChange={(e) => updateField('experience', e.target.value)}
+                  value={form.experienceLevel}
+                  onChange={(e) => updateField('experienceLevel', e.target.value)}
                   className={inputClass}
                   required
                 >
                   <option value="">Select Experience Level</option>
-                  <option value="entry-level">Entry-level</option>
-                  <option value="mid-level">Mid-level</option>
-                  <option value="senior-level">Senior-level</option>
+                  <option value="entry">Entry-level</option>
+                  <option value="mid">Mid-level</option>
+                  <option value="senior">Senior-level</option>
+                  <option value="lead">Lead</option>
+                  <option value="expert">Expert</option>
                 </select>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="city" className="mb-2 block text-sm font-medium">
-                  Location (City) <span className="text-red-500">*</span>
+                <label htmlFor="location" className="mb-2 block text-sm font-medium">
+                  Location <span className="text-red-500">*</span>
                 </label>
                 <input
-                  id="city"
+                  id="location"
                   type="text"
                   placeholder="e.g. San Francisco, CA"
-                  value={form.city}
-                  onChange={(e) => updateField('city', e.target.value)}
+                  value={form.location}
+                  onChange={(e) => updateField('location', e.target.value)}
                   className={inputClass}
                   required
                 />
@@ -486,9 +494,13 @@ export function CreateJobContent() {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+              className="flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
             >
-              <Send className="mr-2 h-4 w-4" />
+              {saving ? (
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
               {saving ? 'Submitting...' : editJobId ? 'Update Job' : 'Publish Job'}
             </button>
           </div>

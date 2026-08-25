@@ -6,10 +6,12 @@ import { seekerService } from '@/services';
 import { ApplicationsFilters } from './ApplicationsFilters';
 import { ApplicationCard } from './ApplicationCard';
 import { LoadingSpinner } from '@/components';
+import { useToast } from '@/context';
 
 const sortOptions = ['Newest First', 'Oldest First'];
 
 export function ApplicationsContent() {
+  const toast = useToast();
   const [sortBy, setSortBy] = useState('Newest First');
   const [sortOpen, setSortOpen] = useState(false);
   const sortRef = useRef(null);
@@ -21,6 +23,7 @@ export function ApplicationsContent() {
 
   const [selectedStatus, setSelectedStatus] = useState(['all']);
   const [selectedDate, setSelectedDate] = useState('all');
+  const [withdrawingAppId, setWithdrawingAppId] = useState(null);
 
   const loadApplications = async () => {
     setLoading(true);
@@ -74,16 +77,19 @@ export function ApplicationsContent() {
 
   const handleWithdraw = async (appId) => {
     if (!window.confirm('Are you sure you want to withdraw this application?')) return;
+    setWithdrawingAppId(appId);
     try {
       const response = await seekerService.withdrawApplication(appId);
       if (response.success) {
-        alert('Application withdrawn successfully!');
+        toast.success('Application withdrawn successfully!');
         setApplications((prev) =>
           prev.map((app) => (app.id === appId ? { ...app, status: 'withdrawn' } : app))
         );
       }
     } catch (err) {
-      alert(err.message || 'Failed to withdraw application');
+      toast.error(err.message || 'Failed to withdraw application');
+    } finally {
+      setWithdrawingAppId(null);
     }
   };
 
@@ -184,6 +190,7 @@ export function ApplicationsContent() {
                 key={application.id}
                 application={application}
                 onWithdraw={handleWithdraw}
+                isWithdrawing={withdrawingAppId === application.id}
               />
             ))
           )}

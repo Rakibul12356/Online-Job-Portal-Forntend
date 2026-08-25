@@ -1,26 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Building2,
   Eye,
   EyeOff,
   Lock,
   LogIn,
   Mail,
   ShieldCheck,
-  User,
 } from 'lucide-react';
-import { DUMMY_ACCOUNTS, ROUTES } from '@/constants';
-import { useAuth } from '@/context';
+import { ROUTES } from '@/constants';
+import { useAuth, useToast } from '@/context';
 
 export function SignInPage() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
+  const toast = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [accountType, setAccountType] = useState('user');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -31,22 +30,25 @@ export function SignInPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
+    setIsLoading(true);
 
-    const result = await login(email, password);
-    if (result.success) {
-      navigate(ROUTES.DASHBOARD);
-      return;
+    try {
+      const result = await login(email, password);
+      if (result.success) {
+        toast.success('Successfully logged in!');
+        navigate(ROUTES.DASHBOARD);
+        return;
+      }
+
+      setError(result.message);
+      toast.error(result.message || 'Login failed. Please check your credentials.');
+    } catch (err) {
+      const errMsg = err.message || 'Something went wrong. Please try again.';
+      setError(errMsg);
+      toast.error(errMsg);
+    } finally {
+      setIsLoading(false);
     }
-
-    setError(result.message);
-  }
-
-  function fillDummyCredentials(type) {
-    const account = DUMMY_ACCOUNTS[type];
-    setAccountType(type);
-    setEmail(account.email);
-    setPassword(account.password);
-    setError('');
   }
 
   return (
@@ -69,32 +71,6 @@ export function SignInPage() {
             </p>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => fillDummyCredentials('user')}
-              className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
-                accountType === 'user'
-                  ? 'border-slate-900 bg-slate-900 text-white'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <User className="h-4 w-4" />
-              User
-            </button>
-            <button
-              type="button"
-              onClick={() => fillDummyCredentials('company')}
-              className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
-                accountType === 'company'
-                  ? 'border-slate-900 bg-slate-900 text-white'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <Building2 className="h-4 w-4" />
-              Company
-            </button>
-          </div>
 
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">
@@ -109,7 +85,7 @@ export function SignInPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
-                placeholder="you@example.com"
+                placeholder="email"
                 required
               />
             </div>
@@ -148,19 +124,17 @@ export function SignInPage() {
 
           <button
             type="submit"
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-900 text-base font-semibold text-white transition-colors hover:bg-slate-800"
+            disabled={isLoading}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-900 text-base font-semibold text-white transition-colors hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
           >
-            <LogIn className="h-4 w-4" />
-            Sign In
+            {isLoading ? (
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <LogIn className="h-4 w-4" />
+            )}
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
-
-        <p className="mt-4 text-center text-xs text-gray-400">
-          Demo User: {DUMMY_ACCOUNTS.user.email} / {DUMMY_ACCOUNTS.user.password}
-          <br />
-          Demo Company: {DUMMY_ACCOUNTS.company.email} /{' '}
-          {DUMMY_ACCOUNTS.company.password}
-        </p>
 
         <div className="relative my-8">
           <div className="absolute inset-0 flex items-center" aria-hidden="true">

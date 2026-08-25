@@ -25,7 +25,7 @@ const statusLabels = {
   withdrawn: 'Withdrawn',
 };
 
-export function ApplicationCard({ application, onWithdraw }) {
+export function ApplicationCard({ application, onWithdraw, isWithdrawing }) {
   const Icon = application.icon || Briefcase;
   const title = application.jobTitle || application.title || 'Job Position';
   const company = application.company;
@@ -112,11 +112,16 @@ export function ApplicationCard({ application, onWithdraw }) {
               {showWithdraw && (
                 <button
                   type="button"
+                  disabled={isWithdrawing}
                   onClick={() => onWithdraw?.(application.id)}
-                  className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium transition-colors hover:bg-gray-50 text-red-600 hover:bg-red-50"
+                  className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium transition-colors hover:bg-gray-50 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <X className="mr-2 h-4 w-4" />
-                  Withdraw
+                  {isWithdrawing ? (
+                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border border-red-600 border-t-transparent" />
+                  ) : (
+                    <X className="mr-2 h-4 w-4" />
+                  )}
+                  {isWithdrawing ? 'Withdrawing...' : 'Withdraw'}
                 </button>
               )}
             </div>

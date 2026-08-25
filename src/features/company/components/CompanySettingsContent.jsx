@@ -18,6 +18,7 @@ import {
 import { ROUTES } from '@/constants';
 import { employerService } from '@/services';
 import { sanitizeMediaUrl } from '@/config/env';
+import { useToast } from '@/context';
 import {
   companySizeOptions,
   companyTypeOptions,
@@ -91,11 +92,11 @@ export function CompanySettingsContent({ user, settings }) {
     try {
       const response = await employerService.uploadLogo(file);
       if (response.success) {
-        alert('Logo uploaded successfully!');
-        window.location.reload();
+        toast.success('Logo uploaded successfully!');
+        setTimeout(() => window.location.reload(), 1000);
       }
     } catch (err) {
-      alert(err.message || 'Failed to upload logo');
+      toast.error(err.message || 'Failed to upload logo');
     } finally {
       setLogoLoading(false);
     }
@@ -107,11 +108,11 @@ export function CompanySettingsContent({ user, settings }) {
     try {
       const response = await employerService.removeLogo();
       if (response.success) {
-        alert('Logo removed successfully!');
-        window.location.reload();
+        toast.success('Logo removed successfully!');
+        setTimeout(() => window.location.reload(), 1000);
       }
     } catch (err) {
-      alert(err.message || 'Failed to remove logo');
+      toast.error(err.message || 'Failed to remove logo');
     } finally {
       setLogoLoading(false);
     }
@@ -152,14 +153,18 @@ export function CompanySettingsContent({ user, settings }) {
     try {
       const response = await employerService.updateCompanySettings(payload);
       if (response.success) {
-        alert('Company settings saved successfully!');
-        window.location.reload();
+        toast.success('Company settings saved successfully!');
+        setTimeout(() => window.location.reload(), 1000);
       } else {
-        setError(response.message || 'Failed to save settings');
+        const msg = response.message || 'Failed to save settings';
+        setError(msg);
+        toast.error(msg);
       }
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Error occurred while saving settings');
+      const msg = err.message || 'Error occurred while saving settings';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -271,9 +276,13 @@ export function CompanySettingsContent({ user, settings }) {
                       type="button"
                       onClick={() => logoInputRef.current?.click()}
                       disabled={logoLoading}
-                      className="flex cursor-pointer items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                      className="flex cursor-pointer items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
                     >
-                      <Upload className="mr-2 h-4 w-4" />
+                      {logoLoading ? (
+                        <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <Upload className="mr-2 h-4 w-4" />
+                      )}
                       Upload Logo
                     </button>
                     {settings?.logoUrl && (
@@ -281,9 +290,13 @@ export function CompanySettingsContent({ user, settings }) {
                         type="button"
                         onClick={handleRemoveLogo}
                         disabled={logoLoading}
-                        className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50 text-red-600 disabled:opacity-50"
+                        className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50 text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        {logoLoading ? (
+                          <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                        ) : (
+                          <Trash2 className="mr-2 h-4 w-4" />
+                        )}
                         Remove Logo
                       </button>
                     )}
@@ -515,9 +528,13 @@ export function CompanySettingsContent({ user, settings }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                className="flex items-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
               >
-                <Save className="mr-2 h-4 w-4" />
+                {saving ? (
+                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>

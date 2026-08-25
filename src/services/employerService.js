@@ -2,7 +2,7 @@ import { apiClient } from '@/api';
 
 export const employerService = {
   async getDashboard() {
-    return apiClient.get('/company/dashboard');
+    return apiClient.get('/dashboard/company');
   },
 
   async getOwnedJobs(params = {}) {

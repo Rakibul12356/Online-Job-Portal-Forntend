@@ -17,16 +17,20 @@ import {
 import { ROUTES } from '@/constants';
 import { seekerService } from '@/services';
 import { sanitizeMediaUrl } from '@/config/env';
+import { useToast } from '@/context';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900';
 
 export function EditProfileContent({ user, profile }) {
   const navigate = useNavigate();
+  const toast = useToast();
   const avatarInputRef = useRef(null);
   const [skills, setSkills] = useState(profile?.skills || []);
   const [skillInput, setSkillInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [removingAvatar, setRemovingAvatar] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     name: profile?.name || user?.name || '',
@@ -90,13 +94,18 @@ export function EditProfileContent({ user, profile }) {
 
       const result = await seekerService.updateProfile(payload);
       if (result.success) {
+        toast.success('Profile updated successfully!');
         navigate(ROUTES.PROFILE);
       } else {
-        setError(result.message || 'Failed to update profile');
+        const msg = result.message || 'Failed to update profile';
+        setError(msg);
+        toast.error(msg);
       }
     } catch (err) {
       console.error('Error saving profile:', err);
-      setError(err.message || 'Error occurred while saving profile');
+      const msg = err.message || 'Error occurred while saving profile';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -143,17 +152,20 @@ export function EditProfileContent({ user, profile }) {
                 type="file"
                 className="hidden"
                 accept="image/*"
+                disabled={uploadingAvatar || removingAvatar}
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
+                  setUploadingAvatar(true);
                   try {
                     const response = await seekerService.uploadAvatar(file);
                     if (response.success) {
-                      alert('Avatar uploaded successfully!');
-                      window.location.reload();
+                      toast.success('Avatar uploaded successfully!');
+                      setTimeout(() => window.location.reload(), 1000);
                     }
                   } catch (err) {
-                    alert(err.message || 'Failed to upload avatar');
+                    toast.error(err.message || 'Failed to upload avatar');
+                    setUploadingAvatar(false);
                   }
                 }}
               />
@@ -170,11 +182,16 @@ export function EditProfileContent({ user, profile }) {
               </div>
               <button
                 type="button"
+                disabled={uploadingAvatar || removingAvatar}
                 onClick={() => avatarInputRef.current?.click()}
-                className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-slate-900 transition-transform hover:scale-105 cursor-pointer"
+                className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-slate-900 transition-transform hover:scale-105 cursor-pointer disabled:opacity-50"
                 title="Upload Photo"
               >
-                <Camera className="h-5 w-5 text-white" />
+                {uploadingAvatar ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Camera className="h-5 w-5 text-white" />
+                )}
               </button>
             </div>
             <div className="flex-1">
@@ -185,31 +202,43 @@ export function EditProfileContent({ user, profile }) {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
+                  disabled={uploadingAvatar || removingAvatar}
                   onClick={() => avatarInputRef.current?.click()}
-                  className="flex cursor-pointer items-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                  className="flex cursor-pointer items-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
                 >
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Photo
+                  {uploadingAvatar ? (
+                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
+                  {uploadingAvatar ? 'Uploading...' : 'Upload Photo'}
                 </button>
                 {profile?.avatarUrl && (
                   <button
                     type="button"
+                    disabled={uploadingAvatar || removingAvatar}
                     onClick={async () => {
                       if (!window.confirm('Remove profile photo?')) return;
+                      setRemovingAvatar(true);
                       try {
                         const response = await seekerService.deleteAvatar();
                         if (response.success) {
-                          alert('Photo removed!');
-                          window.location.reload();
+                          toast.success('Photo removed!');
+                          setTimeout(() => window.location.reload(), 1000);
                         }
                       } catch (err) {
-                        alert(err.message || 'Failed to remove photo');
+                        toast.error(err.message || 'Failed to remove photo');
+                        setRemovingAvatar(false);
                       }
                     }}
-                    className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50 text-red-600"
+                    className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50 text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remove
+                    {removingAvatar ? (
+                      <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                    ) : (
+                      <Trash2 className="mr-2 h-4 w-4" />
+                    )}
+                    {removingAvatar ? 'Removing...' : 'Remove'}
                   </button>
                 )}
               </div>
@@ -525,9 +554,13 @@ export function EditProfileContent({ user, profile }) {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+              className="flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
             >
-              <Save className="mr-2 h-4 w-4" />
+              {saving ? (
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>

@@ -22,12 +22,15 @@ import { ROUTES } from '@/constants';
 import { employerService } from '@/services';
 import { LoadingSpinner } from '@/components';
 import { sanitizeMediaUrl } from '@/config/env';
+import { useToast } from '@/context';
 
 export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
   const navigate = useNavigate();
+  const toast = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [shortlistingAppId, setShortlistingAppId] = useState(null);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -51,16 +54,19 @@ export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
   }, []);
 
   const handleShortlist = async (appId) => {
+    setShortlistingAppId(appId);
     try {
       const response = await employerService.updateApplicantStatus(appId, 'shortlisted');
       if (response.success) {
-        alert('Applicant status updated to shortlisted!');
+        toast.success('Applicant status updated to shortlisted!');
         // Refresh local dashboard data
         const updated = await employerService.getDashboard();
         if (updated.success) setData(updated.data);
       }
     } catch (err) {
-      alert(err.message || 'Failed to update applicant status');
+      toast.error(err.message || 'Failed to update applicant status');
+    } finally {
+      setShortlistingAppId(null);
     }
   };
 
@@ -255,15 +261,20 @@ export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
                         )}
                         <div className="flex flex-wrap items-center gap-2">
                           {applicant.status === 'pending' && (
-                            <button
-                              type="button"
-                              onClick={() => handleShortlist(applicant.id)}
-                              className="flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white hover:bg-slate-800"
-                            >
-                              <Check className="mr-1 h-3 w-3" />
-                              Shortlist
-                            </button>
-                          )}
+                             <button
+                               type="button"
+                               disabled={shortlistingAppId !== null}
+                               onClick={() => handleShortlist(applicant.id)}
+                               className="flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
+                             >
+                               {shortlistingAppId === applicant.id ? (
+                                 <span className="mr-1 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
+                               ) : (
+                                 <Check className="mr-1 h-3 w-3" />
+                               )}
+                               Shortlist
+                             </button>
+                           )}
                           <Link
                             to={ROUTES.COMPANY_APPLICANTS}
                             className="flex h-8 items-center rounded-lg border border-gray-300 px-3 text-xs font-medium hover:bg-gray-50 text-slate-900"

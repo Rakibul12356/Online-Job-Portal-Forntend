@@ -14,12 +14,13 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
-import { useAuth } from '@/context';
+import { useAuth, useToast } from '@/context';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900';
 
 export function JobSeekerRegisterForm() {
+  const toast = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -38,7 +39,9 @@ export function JobSeekerRegisterForm() {
     const data = Object.fromEntries(formData.entries());
 
     if (data.password !== data.confirmPassword) {
-      setError('Passwords do not match');
+      const msg = 'Passwords do not match';
+      setError(msg);
+      toast.error(msg);
       setLoading(false);
       return;
     }
@@ -56,12 +59,14 @@ export function JobSeekerRegisterForm() {
     const result = await registerSeeker(payload);
     setLoading(false);
     if (result.success) {
+      toast.success('Registration successful!');
       setSuccess('Registration successful! Redirecting to Sign In...');
       setTimeout(() => {
         navigate(ROUTES.SIGN_IN);
       }, 1500);
     } else {
       setError(result.message);
+      toast.error(result.message || 'Registration failed. Please check the entered fields.');
     }
   }
 
@@ -234,10 +239,15 @@ export function JobSeekerRegisterForm() {
 
         <button
           type="submit"
-          className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-900 text-base font-semibold text-white transition-colors hover:bg-slate-800"
+          disabled={loading}
+          className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-900 text-base font-semibold text-white transition-colors hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
         >
-          <UserPlus className="h-4 w-4" />
-          Create Account
+          {loading ? (
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            <UserPlus className="h-4 w-4" />
+          )}
+          {loading ? 'Registering...' : 'Create Account'}
         </button>
       </form>
 

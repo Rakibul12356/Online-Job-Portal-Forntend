@@ -20,6 +20,7 @@ import {
 import { ROUTES } from '@/constants';
 import { employerService } from '@/services';
 import { LoadingSpinner } from '@/components';
+import { useToast } from '@/context';
 
 const statusFilterOptions = ['All Status', 'Active', 'Draft', 'Closed'];
 const sortOptions = ['Newest First', 'Oldest First'];
@@ -83,6 +84,7 @@ function FilterDropdown({ label, icon: Icon, value, options, isOpen, onToggle, o
 }
 
 export function ManageJobsContent() {
+  const toast = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [sortBy, setSortBy] = useState('Newest First');
@@ -94,6 +96,8 @@ export function ManageJobsContent() {
   const [error, setError] = useState(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [processingJobId, setProcessingJobId] = useState(null);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -153,67 +157,82 @@ export function ManageJobsContent() {
   }
 
   const handlePublish = async (id) => {
+    setProcessingJobId(id);
     try {
       const response = await employerService.publishJob(id);
       if (response.success) {
-        alert('Job published successfully!');
+        toast.success('Job published successfully!');
         fetchJobs();
       }
     } catch (err) {
-      alert(err.message || 'Failed to publish job');
+      toast.error(err.message || 'Failed to publish job');
+    } finally {
+      setProcessingJobId(null);
     }
   };
 
   const handleClose = async (id) => {
     if (!window.confirm('Are you sure you want to close this job posting?')) return;
+    setProcessingJobId(id);
     try {
       const response = await employerService.closeJob(id);
       if (response.success) {
-        alert('Job closed successfully!');
+        toast.success('Job closed successfully!');
         fetchJobs();
       }
     } catch (err) {
-      alert(err.message || 'Failed to close job');
+      toast.error(err.message || 'Failed to close job');
+    } finally {
+      setProcessingJobId(null);
     }
   };
 
   const handleReactivate = async (id) => {
+    setProcessingJobId(id);
     try {
       const response = await employerService.reactivateJob(id);
       if (response.success) {
-        alert('Job reactivated successfully!');
+        toast.success('Job reactivated successfully!');
         fetchJobs();
       }
     } catch (err) {
-      alert(err.message || 'Failed to reactivate job');
+      toast.error(err.message || 'Failed to reactivate job');
+    } finally {
+      setProcessingJobId(null);
     }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this job posting?')) return;
+    setProcessingJobId(id);
     try {
       const response = await employerService.deleteJob(id);
       if (response.success) {
-        alert('Job deleted successfully!');
+        toast.success('Job deleted successfully!');
         setSelectedIds((curr) => curr.filter((val) => val !== id));
         fetchJobs();
       }
     } catch (err) {
-      alert(err.message || 'Failed to delete job');
+      toast.error(err.message || 'Failed to delete job');
+    } finally {
+      setProcessingJobId(null);
     }
   };
 
   const handleBulkAction = async (action) => {
     if (!window.confirm(`Perform bulk ${action} action on ${selectedIds.length} jobs?`)) return;
+    setBulkProcessing(true);
     try {
       const response = await employerService.bulkJobsAction(selectedIds, action);
       if (response.success) {
-        alert('Bulk action executed successfully!');
+        toast.success('Bulk action executed successfully!');
         setSelectedIds([]);
         fetchJobs();
       }
     } catch (err) {
-      alert(err.message || 'Bulk action failed');
+      toast.error(err.message || 'Bulk action failed');
+    } finally {
+      setBulkProcessing(false);
     }
   };
 
@@ -354,10 +373,10 @@ export function ManageJobsContent() {
                             {job.title}
                           </Link>
                           <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
-                            {job.city && (
+                            {job.location && (
                               <span className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
-                                {job.city}
+                                {job.location}
                               </span>
                             )}
                             {job.jobType && (
@@ -400,39 +419,59 @@ export function ManageJobsContent() {
                             <button
                               type="button"
                               onClick={() => handlePublish(job.id)}
+                              disabled={processingJobId !== null || bulkProcessing}
                               title="Publish"
-                              className="rounded p-2 text-green-600 hover:bg-green-50"
+                              className="rounded p-2 text-green-600 hover:bg-green-50 disabled:opacity-50"
                             >
-                              <CheckCircle className="h-4 w-4" />
+                              {processingJobId === job.id ? (
+                                <span className="h-4 w-4 block animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4" />
+                              )}
                             </button>
                           )}
                           {!isClosed && !isDraft && (
                             <button
                               type="button"
                               onClick={() => handleClose(job.id)}
+                              disabled={processingJobId !== null || bulkProcessing}
                               title="Close Job"
-                              className="rounded p-2 text-amber-600 hover:bg-amber-50"
+                              className="rounded p-2 text-amber-600 hover:bg-amber-50 disabled:opacity-50"
                             >
-                              <XCircle className="h-4 w-4" />
+                              {processingJobId === job.id ? (
+                                <span className="h-4 w-4 block animate-spin rounded-full border-2 border-amber-600 border-t-transparent" />
+                              ) : (
+                                <XCircle className="h-4 w-4" />
+                              )}
                             </button>
                           )}
                           {isClosed && (
                             <button
                               type="button"
                               onClick={() => handleReactivate(job.id)}
+                              disabled={processingJobId !== null || bulkProcessing}
                               title="Reactivate"
-                              className="rounded p-2 text-green-600 hover:bg-green-50"
+                              className="rounded p-2 text-green-600 hover:bg-green-50 disabled:opacity-50"
                             >
-                              <PlayCircle className="h-4 w-4" />
+                              {processingJobId === job.id ? (
+                                <span className="h-4 w-4 block animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
+                              ) : (
+                                <PlayCircle className="h-4 w-4" />
+                              )}
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => handleDelete(job.id)}
+                            disabled={processingJobId !== null || bulkProcessing}
                             title="Delete"
-                            className="rounded p-2 text-red-600 hover:bg-red-50"
+                            className="rounded p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {processingJobId === job.id ? (
+                              <span className="h-4 w-4 block animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </button>
                         </div>
                       </td>
@@ -454,25 +493,40 @@ export function ManageJobsContent() {
                 <button
                   type="button"
                   onClick={() => handleBulkAction('deactivate')}
-                  className="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium hover:bg-gray-50 text-slate-900"
+                  disabled={bulkProcessing || processingJobId !== null}
+                  className="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium hover:bg-gray-50 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <PauseCircle className="mr-2 h-3 w-3" />
+                  {bulkProcessing ? (
+                    <span className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
+                  ) : (
+                    <PauseCircle className="mr-2 h-3 w-3" />
+                  )}
                   Deactivate
                 </button>
                 <button
                   type="button"
                   onClick={() => handleBulkAction('activate')}
-                  className="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium hover:bg-gray-50 text-slate-900"
+                  disabled={bulkProcessing || processingJobId !== null}
+                  className="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium hover:bg-gray-50 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <PlayCircle className="mr-2 h-3 w-3" />
+                  {bulkProcessing ? (
+                    <span className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
+                  ) : (
+                    <PlayCircle className="mr-2 h-3 w-3" />
+                  )}
                   Activate
                 </button>
                 <button
                   type="button"
                   onClick={() => handleBulkAction('delete')}
-                  className="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-red-600 hover:bg-red-50"
+                  disabled={bulkProcessing || processingJobId !== null}
+                  className="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Trash2 className="mr-2 h-3 w-3" />
+                  {bulkProcessing ? (
+                    <span className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                  ) : (
+                    <Trash2 className="mr-2 h-3 w-3" />
+                  )}
                   Delete
                 </button>
               </div>

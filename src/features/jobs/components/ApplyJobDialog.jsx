@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { FileText, Send, Trash2, Upload, X } from 'lucide-react';
 import { jobsService } from '@/services';
+import { useToast } from '@/context';
+
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_COVER_LENGTH = 500;
@@ -12,6 +14,7 @@ function formatFileSize(bytes) {
 }
 
 export function ApplyJobDialog({ isOpen, job, onClose }) {
+  const toast = useToast();
   const [resumeFile, setResumeFile] = useState(null);
   const [coverMessage, setCoverMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -52,12 +55,12 @@ export function ApplyJobDialog({ isOpen, job, onClose }) {
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      alert('Please upload a PDF file only.');
+      toast.error('Please upload a PDF file only.');
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      alert('File size must be less than 5MB.');
+      toast.error('File size must be less than 5MB.');
       return;
     }
 
@@ -256,9 +259,13 @@ export function ApplyJobDialog({ isOpen, job, onClose }) {
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
             >
-              <Send className="h-4 w-4" />
+              {submitting ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
               {submitting ? 'Submitting...' : 'Submit Application'}
             </button>
           </div>
