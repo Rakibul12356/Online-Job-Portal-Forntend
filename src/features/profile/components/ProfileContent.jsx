@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bookmark,
@@ -16,41 +17,105 @@ import {
   Phone,
   Upload,
   User,
+  Briefcase,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
-import { profileData } from '../data/mockProfile';
+import { seekerService } from '@/services';
+import { sanitizeMediaUrl } from '@/config/env';
 
-export function ProfileContent({ user }) {
-  const displayName = user?.name ?? 'John Doe';
-  const displayEmail = user?.email ?? profileData.contact.email;
+export function ProfileContent({ user, profile }) {
+  const displayName = profile.name || user?.name || 'Job Seeker';
+  const displayEmail = profile.email || user?.email || '';
+  
+  const resumeInputRef = useRef(null);
+  const avatarInputRef = useRef(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [resumeLoading, setResumeLoading] = useState(false);
+
+  const formattedLocation = profile.location
+    ? [profile.location.city, profile.location.state, profile.location.country]
+        .filter(Boolean)
+        .join(', ')
+    : 'No location set';
+
+  const handleResumeUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setResumeLoading(true);
+    try {
+      const response = await seekerService.uploadResume(file);
+      if (response.success) {
+        alert('Resume uploaded successfully!');
+        window.location.reload();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to upload resume');
+    } finally {
+      setResumeLoading(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarLoading(true);
+    try {
+      const response = await seekerService.uploadAvatar(file);
+      if (response.success) {
+        alert('Avatar uploaded successfully!');
+        window.location.reload();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to upload avatar');
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
 
   return (
     <>
       <div className="mb-8 rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
           <div className="relative shrink-0">
-            <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gray-100">
-              <User className="h-16 w-16 text-slate-900" />
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={avatarLoading}
+            />
+            <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gray-100 border border-gray-200">
+              {profile.avatarUrl ? (
+                <img
+                  src={sanitizeMediaUrl(profile.avatarUrl)}
+                  alt={displayName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-16 w-16 text-slate-900" />
+              )}
             </div>
-            <div className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-slate-900">
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={avatarLoading}
+              className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-slate-900 transition-transform hover:scale-105 cursor-pointer disabled:opacity-50"
+              title="Upload new avatar"
+            >
               <Camera className="h-5 w-5 text-white" />
-            </div>
+            </button>
           </div>
 
           <div className="flex-1">
             <div className="mb-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <h1 className="mb-2 text-3xl font-bold">{displayName}</h1>
-                <p className="mb-2 text-lg text-gray-500">{profileData.title}</p>
+                <p className="mb-2 text-lg text-gray-500">{profile.title || 'Professional Title'}</p>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
-                    {profileData.location}
-                  </span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {profileData.memberSince}
+                    {formattedLocation}
                   </span>
                 </div>
               </div>
@@ -66,21 +131,21 @@ export function ProfileContent({ user }) {
             <div className="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
               <div>
                 <p className="text-2xl font-bold text-slate-900">
-                  {profileData.stats.applications}
+                  {profile.experience?.length || 0}
                 </p>
-                <p className="text-sm text-gray-500">Applications</p>
+                <p className="text-sm text-gray-500">Experience Entries</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-900">
-                  {profileData.stats.inReview}
+                  {profile.education?.length || 0}
                 </p>
-                <p className="text-sm text-gray-500">In Review</p>
+                <p className="text-sm text-gray-500">Education Entries</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-900">
-                  {profileData.stats.savedJobs}
+                  {profile.skills?.length || 0}
                 </p>
-                <p className="text-sm text-gray-500">Saved Jobs</p>
+                <p className="text-sm text-gray-500">Skills</p>
               </div>
             </div>
           </div>
@@ -91,43 +156,26 @@ export function ProfileContent({ user }) {
         <div className="space-y-6 lg:col-span-2">
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-xl font-semibold">About</h2>
-            <p className="leading-relaxed text-gray-900">{profileData.about}</p>
+            <p className="leading-relaxed text-gray-900 whitespace-pre-line">
+              {profile.bio || 'Write something about yourself...'}
+            </p>
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-xl font-semibold">Contact Information</h2>
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[
                 { icon: Mail, label: 'Email', value: displayEmail },
-                { icon: Phone, label: 'Phone', value: profileData.contact.phone },
-                {
-                  icon: MapPin,
-                  label: 'Location',
-                  value: profileData.contact.address,
-                },
-                {
-                  icon: Link2,
-                  label: 'LinkedIn',
-                  value: profileData.contact.linkedin,
-                  isLink: true,
-                },
-              ].map(({ icon: Icon, label, value, isLink }) => (
+                { icon: Phone, label: 'Phone', value: profile.phone || 'No phone set' },
+                { icon: MapPin, label: 'Location', value: formattedLocation },
+              ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100">
                     <Icon className="h-5 w-5 text-slate-900" />
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">{label}</p>
-                    {isLink ? (
-                      <a
-                        href="#"
-                        className="font-medium text-slate-900 hover:underline"
-                      >
-                        {value}
-                      </a>
-                    ) : (
-                      <p className="font-medium">{value}</p>
-                    )}
+                    <p className="font-medium">{value}</p>
                   </div>
                 </div>
               ))}
@@ -136,60 +184,81 @@ export function ProfileContent({ user }) {
 
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-xl font-semibold">Skills</h2>
-            <div className="flex flex-wrap gap-2">
-              {profileData.skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-900"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
+            {(!profile.skills || profile.skills.length === 0) ? (
+              <p className="text-sm text-gray-500">No skills added yet.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {profile.skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-900"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-xl font-semibold">Work Experience</h2>
-            <div className="space-y-6">
-              {profileData.experience.map((item) => (
-                <div
-                  key={item.id}
-                  className="relative border-l-2 border-gray-200 pb-6 pl-8 last:pb-0"
-                >
+            {(!profile.experience || profile.experience.length === 0) ? (
+              <p className="text-sm text-gray-500">No work experience added yet.</p>
+            ) : (
+              <div className="space-y-6">
+                {profile.experience.map((item) => (
                   <div
-                    className={`absolute -left-2 top-0 h-4 w-4 rounded-full border-2 border-white ${
-                      item.current ? 'bg-slate-900' : 'bg-gray-200'
-                    }`}
-                  />
-                  <h3 className="mb-1 font-semibold">{item.title}</h3>
-                  <p className="mb-2 text-sm text-gray-500">
-                    {item.company} • {item.type}
-                  </p>
-                  <p className="mb-3 text-xs text-gray-500">{item.period}</p>
-                  <p className="text-sm text-gray-900">{item.description}</p>
-                </div>
-              ))}
-            </div>
+                    key={item.id}
+                    className="relative border-l-2 border-gray-200 pb-6 pl-8 last:pb-0"
+                  >
+                    <div
+                      className={`absolute -left-2 top-0 h-4 w-4 rounded-full border-2 border-white ${
+                        item.current ? 'bg-slate-900' : 'bg-gray-200'
+                      }`}
+                    />
+                    <h3 className="mb-1 font-semibold">{item.title}</h3>
+                    <p className="mb-2 text-sm text-gray-500">
+                      {item.company} {item.location ? `• ${item.location}` : ''}
+                    </p>
+                    <p className="mb-3 text-xs text-gray-500">
+                      {item.startDate} to {item.current ? 'Present' : item.endDate || 'N/A'}
+                    </p>
+                    {item.description && (
+                      <p className="text-sm text-gray-900 whitespace-pre-line">{item.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-xl font-semibold">Education</h2>
-            <div className="flex gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-100">
-                <GraduationCap className="h-6 w-6 text-slate-900" />
+            {(!profile.education || profile.education.length === 0) ? (
+              <p className="text-sm text-gray-500">No education entries added yet.</p>
+            ) : (
+              <div className="space-y-6">
+                {profile.education.map((edu) => (
+                  <div key={edu.id} className="flex gap-4 border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                      <GraduationCap className="h-6 w-6 text-slate-900" />
+                    </div>
+                    <div>
+                      <h3 className="mb-1 font-semibold">
+                        {edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}
+                      </h3>
+                      <p className="mb-1 text-sm text-gray-500">{edu.school}</p>
+                      <p className="text-xs text-gray-500">
+                        {edu.startDate} to {edu.endDate || 'N/A'}
+                      </p>
+                      {edu.description && (
+                        <p className="mt-2 text-sm text-gray-600 whitespace-pre-line">{edu.description}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div>
-                <h3 className="mb-1 font-semibold">
-                  {profileData.education.degree}
-                </h3>
-                <p className="mb-1 text-sm text-gray-500">
-                  {profileData.education.school}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {profileData.education.period}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -197,34 +266,53 @@ export function ProfileContent({ user }) {
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h3 className="mb-4 text-lg font-semibold">Resume</h3>
             <div className="space-y-4">
-              <div className="rounded-lg bg-gray-100 p-4">
-                <div className="mb-3 flex items-center gap-3">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white">
-                    <FileText className="h-6 w-6 text-slate-900" />
+              <input
+                ref={resumeInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={handleResumeUpload}
+                disabled={resumeLoading}
+              />
+              {profile.resume?.url ? (
+                <div className="rounded-lg bg-gray-100 p-4">
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white">
+                      <FileText className="h-6 w-6 text-slate-900" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {profile.resume.filename || 'resume.pdf'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Uploaded {profile.resume.uploadedAt ? new Date(profile.resume.uploadedAt).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {profileData.resume.filename}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {profileData.resume.updatedAt}
-                    </p>
-                  </div>
+                  <a
+                    href={sanitizeMediaUrl(profile.resume.url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex h-9 w-full items-center justify-center rounded-lg border border-gray-300 bg-white text-xs font-medium transition-colors hover:bg-gray-50 text-slate-900"
+                  >
+                    <Download className="mr-2 h-3 w-3" />
+                    Download Resume
+                  </a>
                 </div>
-                <button
-                  type="button"
-                  className="flex h-9 w-full items-center justify-center rounded-lg border border-gray-300 bg-white text-xs font-medium transition-colors hover:bg-gray-50"
-                >
-                  <Download className="mr-2 h-3 w-3" />
-                  Download
-                </button>
-              </div>
+              ) : (
+                <div className="rounded-lg bg-amber-50 border border-amber-100 p-4 text-center">
+                  <p className="text-xs text-amber-700">No default resume uploaded yet.</p>
+                </div>
+              )}
+              
               <button
                 type="button"
-                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
+                onClick={() => resumeInputRef.current?.click()}
+                disabled={resumeLoading}
+                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50 cursor-pointer disabled:opacity-50"
               >
                 <Upload className="mr-2 h-4 w-4" />
-                Update Resume
+                {resumeLoading ? 'Uploading...' : profile.resume?.url ? 'Update Resume' : 'Upload Resume'}
               </button>
             </div>
           </div>
@@ -233,14 +321,18 @@ export function ProfileContent({ user }) {
             <h3 className="mb-4 text-lg font-semibold">Social Profiles</h3>
             <div className="space-y-2">
               {[
-                { icon: Link2, label: 'LinkedIn' },
-                { icon: Code, label: 'GitHub' },
-                { icon: Globe, label: 'Portfolio' },
-              ].map(({ icon: Icon, label }) => (
+                { icon: Link2, label: 'LinkedIn', url: profile.social?.linkedin },
+                { icon: Code, label: 'GitHub', url: profile.social?.github },
+                { icon: Globe, label: 'Portfolio', url: profile.social?.portfolio },
+              ].map(({ icon: Icon, label, url }) => (
                 <a
                   key={label}
-                  href="#"
-                  className="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-gray-100"
+                  href={url || '#'}
+                  target={url ? '_blank' : '_self'}
+                  rel="noreferrer"
+                  className={`flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-gray-100 ${
+                    !url ? 'opacity-40 cursor-default pointer-events-none' : ''
+                  }`}
                 >
                   <Icon className="h-5 w-5 text-gray-500" />
                   <span className="text-sm font-medium">{label}</span>
@@ -282,3 +374,4 @@ export function ProfileContent({ user }) {
 }
 
 export default ProfileContent;
+

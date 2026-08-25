@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Camera,
@@ -15,28 +15,32 @@ import {
   X,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
-import { profileData } from '../data/mockProfile';
+import { seekerService } from '@/services';
+import { sanitizeMediaUrl } from '@/config/env';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900';
 
-export function EditProfileContent({ user }) {
+export function EditProfileContent({ user, profile }) {
   const navigate = useNavigate();
-  const [skills, setSkills] = useState(profileData.skills);
+  const avatarInputRef = useRef(null);
+  const [skills, setSkills] = useState(profile?.skills || []);
   const [skillInput, setSkillInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const [form, setForm] = useState({
-    name: user?.name ?? 'John Doe',
-    email: user?.email ?? profileData.contact.email,
-    phone: profileData.contact.phone,
-    title: profileData.title,
-    city: 'San Francisco',
-    state: 'California',
-    country: 'United States',
-    zipcode: '94102',
-    bio: profileData.about,
-    linkedin: 'https://linkedin.com/in/johndoe',
-    github: 'https://github.com/johndoe',
-    portfolio: 'https://johndoe.dev',
+    name: profile?.name || user?.name || '',
+    email: profile?.email || user?.email || '',
+    phone: profile?.phone || '',
+    title: profile?.title || '',
+    city: profile?.location?.city || '',
+    state: profile?.location?.state || '',
+    country: profile?.location?.country || '',
+    zipcode: profile?.location?.zipcode || '',
+    bio: profile?.bio || '',
+    linkedin: profile?.social?.linkedin || '',
+    github: profile?.social?.github || '',
+    portfolio: profile?.social?.portfolio || '',
   });
 
   function updateField(field, value) {
@@ -62,9 +66,40 @@ export function EditProfileContent({ user }) {
     }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    navigate(ROUTES.PROFILE);
+    setSaving(true);
+    setError('');
+
+    try {
+      const payload = {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        title: form.title,
+        city: form.city,
+        state: form.state,
+        country: form.country,
+        zipcode: form.zipcode,
+        bio: form.bio,
+        skills,
+        linkedin: form.linkedin,
+        github: form.github,
+        portfolio: form.portfolio,
+      };
+
+      const result = await seekerService.updateProfile(payload);
+      if (result.success) {
+        navigate(ROUTES.PROFILE);
+      } else {
+        setError(result.message || 'Failed to update profile');
+      }
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      setError(err.message || 'Error occurred while saving profile');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -103,12 +138,41 @@ export function EditProfileContent({ user }) {
           <h2 className="mb-6 text-xl font-semibold">Profile Photo</h2>
           <div className="flex flex-col items-center gap-6 md:flex-row">
             <div className="relative shrink-0">
-              <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gray-100">
-                <User className="h-16 w-16 text-slate-900" />
+              <input
+                ref={avatarInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const response = await seekerService.uploadAvatar(file);
+                    if (response.success) {
+                      alert('Avatar uploaded successfully!');
+                      window.location.reload();
+                    }
+                  } catch (err) {
+                    alert(err.message || 'Failed to upload avatar');
+                  }
+                }}
+              />
+              <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gray-100 border border-gray-200">
+                {profile?.avatarUrl ? (
+                  <img
+                    src={sanitizeMediaUrl(profile.avatarUrl)}
+                    alt="Avatar"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User className="h-16 w-16 text-slate-900" />
+                )}
               </div>
               <button
                 type="button"
-                className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-slate-900 transition-colors hover:bg-slate-800"
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-slate-900 transition-transform hover:scale-105 cursor-pointer"
+                title="Upload Photo"
               >
                 <Camera className="h-5 w-5 text-white" />
               </button>
@@ -119,18 +183,35 @@ export function EditProfileContent({ user }) {
                 JPG, PNG or GIF. Max size of 5MB.
               </p>
               <div className="flex flex-wrap gap-2">
-                <label className="flex cursor-pointer items-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Photo
-                  <input type="file" className="hidden" accept="image/*" />
-                </label>
                 <button
                   type="button"
-                  className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="flex cursor-pointer items-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Remove
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Photo
                 </button>
+                {profile?.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm('Remove profile photo?')) return;
+                      try {
+                        const response = await seekerService.deleteAvatar();
+                        if (response.success) {
+                          alert('Photo removed!');
+                          window.location.reload();
+                        }
+                      } catch (err) {
+                        alert(err.message || 'Failed to remove photo');
+                      }
+                    }}
+                    className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50 text-red-600"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -263,7 +344,7 @@ export function EditProfileContent({ user }) {
             </button>
           </div>
           <div className="space-y-6">
-            {profileData.experience.map((exp) => (
+            {(profile?.experience || []).map((exp) => (
               <div
                 key={exp.id}
                 className="rounded-lg border border-gray-200 p-4"
@@ -298,13 +379,13 @@ export function EditProfileContent({ user }) {
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium">Start Date</label>
-                    <input type="month" defaultValue="2022-01" className={inputClass} />
+                    <input type="month" defaultValue={exp.startDate || "2022-01"} className={inputClass} />
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium">End Date</label>
                     <input
                       type="month"
-                      defaultValue={exp.id === '2' ? '2021-12' : ''}
+                      defaultValue={exp.endDate || ''}
                       placeholder="Present"
                       className={inputClass}
                     />
@@ -328,7 +409,7 @@ export function EditProfileContent({ user }) {
           </div>
           <div className="rounded-lg border border-gray-200 p-4">
             <div className="mb-4 flex items-start justify-between">
-              <h3 className="font-medium">{profileData.education.degree}</h3>
+              <h3 className="font-medium">{(profile?.education?.[0]?.degree) || 'Degree'}</h3>
               <button
                 type="button"
                 className="rounded p-1 text-red-600 hover:bg-red-50"
@@ -341,7 +422,7 @@ export function EditProfileContent({ user }) {
                 <label className="mb-2 block text-sm font-medium">Institution</label>
                 <input
                   type="text"
-                  defaultValue={profileData.education.school}
+                  defaultValue={(profile?.education?.[0]?.school) || ''}
                   className={inputClass}
                 />
               </div>
@@ -349,17 +430,17 @@ export function EditProfileContent({ user }) {
                 <label className="mb-2 block text-sm font-medium">Degree</label>
                 <input
                   type="text"
-                  defaultValue="Bachelor of Science"
+                  defaultValue={(profile?.education?.[0]?.degree) || ''}
                   className={inputClass}
                 />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium">Start Year</label>
-                <input type="number" defaultValue={2016} className={inputClass} />
+                <input type="number" defaultValue={(profile?.education?.[0]?.startDate ? parseInt(profile.education[0].startDate.substring(0, 4)) : 2016)} className={inputClass} />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium">End Year</label>
-                <input type="number" defaultValue={2020} className={inputClass} />
+                <input type="number" defaultValue={(profile?.education?.[0]?.endDate ? parseInt(profile.education[0].endDate.substring(0, 4)) : 2020)} className={inputClass} />
               </div>
             </div>
           </div>
@@ -368,27 +449,29 @@ export function EditProfileContent({ user }) {
         <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-6 text-xl font-semibold">Resume/CV</h2>
           <div className="space-y-4">
-            <div className="rounded-lg bg-gray-100 p-4">
-              <div className="mb-3 flex items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white">
-                  <FileText className="h-6 w-6 text-slate-900" />
+            {profile?.resume?.url && (
+              <div className="rounded-lg bg-gray-100 p-4">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white">
+                    <FileText className="h-6 w-6 text-slate-900" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {profile.resume.filename || 'resume.pdf'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Uploaded {profile.resume.uploadedAt ? new Date(profile.resume.uploadedAt).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded p-2 text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {profileData.resume.filename}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {profileData.resume.updatedAt} • 245 KB
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="rounded p-2 text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </div>
-            </div>
+            )}
             <label className="flex w-full cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium hover:bg-gray-50">
               <Upload className="mr-2 h-4 w-4" />
               Upload New Resume
@@ -426,6 +509,11 @@ export function EditProfileContent({ user }) {
         </section>
 
         <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          {error && (
+            <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          )}
           <div className="flex flex-col justify-end gap-3 sm:flex-row">
             <Link
               to={ROUTES.PROFILE}
@@ -436,10 +524,11 @@ export function EditProfileContent({ user }) {
             </Link>
             <button
               type="submit"
-              className="flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+              disabled={saving}
+              className="flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
             >
               <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </section>

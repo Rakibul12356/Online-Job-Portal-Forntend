@@ -1,18 +1,65 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { ROUTES } from '@/constants';
-import {
-  appliedJobs,
-  sortOptions,
-} from '../data/mockApplications';
+import { seekerService } from '@/services';
 import { ApplicationsFilters } from './ApplicationsFilters';
 import { ApplicationCard } from './ApplicationCard';
+import { LoadingSpinner } from '@/components';
+
+const sortOptions = ['Newest First', 'Oldest First'];
 
 export function ApplicationsContent() {
   const [sortBy, setSortBy] = useState('Newest First');
   const [sortOpen, setSortOpen] = useState(false);
   const sortRef = useRef(null);
+
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [total, setTotal] = useState(0);
+
+  const [selectedStatus, setSelectedStatus] = useState(['all']);
+  const [selectedDate, setSelectedDate] = useState('all');
+
+  const loadApplications = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {};
+
+      if (selectedStatus.length > 0 && !selectedStatus.includes('all')) {
+        params.status = selectedStatus[0];
+      }
+
+      if (selectedDate !== 'all') {
+        params.date = selectedDate;
+      }
+
+      params.sort = sortBy === 'Newest First' ? 'newest' : 'oldest';
+
+      const response = await seekerService.getApplications(params);
+      if (response.success && response.data) {
+        setApplications(response.data.items || []);
+        setTotal(
+          response.data.pagination?.total ??
+            response.data.items?.length ??
+            0,
+        );
+      } else {
+        setError('Failed to fetch applications');
+      }
+    } catch (err) {
+      console.error('Error fetching applications:', err);
+      setError(err.message || 'Error occurred while loading applications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadApplications();
+  }, [selectedStatus, selectedDate, sortBy]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -24,6 +71,21 @@ export function ApplicationsContent() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleWithdraw = async (appId) => {
+    if (!window.confirm('Are you sure you want to withdraw this application?')) return;
+    try {
+      const response = await seekerService.withdrawApplication(appId);
+      if (response.success) {
+        alert('Application withdrawn successfully!');
+        setApplications((prev) =>
+          prev.map((app) => (app.id === appId ? { ...app, status: 'withdrawn' } : app))
+        );
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to withdraw application');
+    }
+  };
 
   return (
     <>
@@ -47,13 +109,26 @@ export function ApplicationsContent() {
             </p>
           </div>
           <p className="text-sm text-gray-500">
-            <span className="font-medium text-gray-900">12</span> applications
+            <span className="font-medium text-gray-900">{total}</span> applications
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-        <ApplicationsFilters />
+        <ApplicationsFilters
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          onFilterChange={(statuses, dateVal) => {
+            setSelectedStatus(statuses);
+            setSelectedDate(dateVal);
+          }}
+          onReset={() => {
+            setSelectedStatus(['all']);
+            setSelectedDate('all');
+          }}
+        />
 
         <div className="space-y-4 lg:col-span-3">
           <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -89,19 +164,29 @@ export function ApplicationsContent() {
             </div>
           </div>
 
-          {appliedJobs.map((application) => (
-            <ApplicationCard key={application.id} application={application} />
-          ))}
+          {error && (
+            <div className="rounded-lg bg-red-50 p-4 text-center text-red-600">
+              {error}
+            </div>
+          )}
 
-          <div className="flex justify-center pt-6">
-            <button
-              type="button"
-              className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
-            >
-              <Loader2 className="mr-2 h-4 w-4" />
-              Load More Applications
-            </button>
-          </div>
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <LoadingSpinner size="lg" />
+            </div>
+          ) : applications.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-gray-300 py-16 text-center">
+              <p className="text-gray-500 font-medium">No applications found matching the filter criteria.</p>
+            </div>
+          ) : (
+            applications.map((application) => (
+              <ApplicationCard
+                key={application.id}
+                application={application}
+                onWithdraw={handleWithdraw}
+              />
+            ))
+          )}
         </div>
       </div>
     </>

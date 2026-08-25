@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Bookmark, Clock, MapPin } from 'lucide-react';
+import { Bookmark, Clock, MapPin, Briefcase } from 'lucide-react';
 import { ROUTES } from '@/constants';
 
 export function JobDetailHeader({ job }) {
-  const Icon = job.icon;
+  const Icon = job.icon || Briefcase;
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
@@ -45,7 +45,7 @@ export function JobDetailHeader({ job }) {
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {job.tags.map((tag, index) => (
+            {(job.tags || job.skills || []).map((tag, index) => (
               <span
                 key={tag}
                 className={

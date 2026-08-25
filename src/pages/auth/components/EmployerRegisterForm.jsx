@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Briefcase,
   Building,
@@ -17,6 +17,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
+import { useAuth } from '@/context';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900';
@@ -24,13 +25,67 @@ const inputClass =
 export function EmployerRegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { registerEmployer } = useAuth();
+  const navigate = useNavigate();
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    const formData = new FormData(event.currentTarget);
+    const data = Object.fromEntries(formData.entries());
+
+    if (data.password !== data.confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    const payload = {
+      companyName: data.companyName,
+      email: data.email,
+      website: data.website,
+      industry: data.industry,
+      companySize: data.companySize,
+      foundedYear: Number(data.foundedYear) || undefined,
+      location: data.location,
+      description: data.description,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+      termsAccepted: data.terms === 'on',
+      verifiedAuthorized: data.verified === 'on',
+      marketingOptIn: data.updates === 'on',
+    };
+
+    const result = await registerEmployer(payload);
+    setLoading(false);
+    if (result.success) {
+      setSuccess('Company registration successful! Redirecting to Sign In...');
+      setTimeout(() => {
+        navigate(ROUTES.SIGN_IN);
+      }, 1500);
+    } else {
+      setError(result.message);
+    }
   }
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm md:p-10">
+      {error && (
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-600" role="status">
+          {success}
+        </p>
+      )}
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="space-y-5">
           <div className="flex items-center gap-2 border-b border-gray-200 pb-2">

@@ -7,13 +7,14 @@ import {
   Send,
   Share2,
   Users,
+  Building2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/constants';
 
 export function JobDetailSidebar({ job, onApply }) {
-  const Icon = job.icon;
-  const { companyInfo } = job;
+  const Icon = job.icon || Building2;
+  const companyInfo = job.companyInfo || {};
 
   return (
     <div className="space-y-6">

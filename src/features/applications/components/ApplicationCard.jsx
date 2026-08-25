@@ -8,15 +8,40 @@ import {
   X,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
-import { statusStyles } from '../data/mockApplications';
 
-export function ApplicationCard({ application }) {
-  const Icon = application.icon;
+const statusBadgeStyles = {
+  pending: 'bg-amber-100 text-amber-800 border border-amber-200',
+  shortlisted: 'bg-green-100 text-green-800 border border-green-200',
+  interviewed: 'bg-blue-100 text-blue-800 border border-blue-200',
+  rejected: 'bg-red-100 text-red-800 border border-red-200',
+  withdrawn: 'bg-gray-100 text-gray-800 border border-gray-200',
+};
+
+const statusLabels = {
+  pending: 'Pending Review',
+  shortlisted: 'Shortlisted',
+  interviewed: 'Interview Scheduled',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
+};
+
+export function ApplicationCard({ application, onWithdraw }) {
+  const Icon = application.icon || Briefcase;
+  const title = application.jobTitle || application.title || 'Job Position';
+  const company = application.company;
+  const status = application.status;
+  const badgeStyle = statusBadgeStyles[status] || 'bg-gray-100 text-gray-800';
+  const statusLabel = statusLabels[status] || status;
+  const appliedOn = application.appliedAt
+    ? `Applied on ${new Date(application.appliedAt).toLocaleDateString()}`
+    : application.appliedOn || 'N/A';
+  
+  const showWithdraw = status === 'pending' || status === 'shortlisted';
 
   return (
     <div
       className={`rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md ${
-        application.faded ? 'opacity-75' : ''
+        application.faded || status === 'withdrawn' ? 'opacity-75' : ''
       }`}
     >
       <div className="flex flex-col gap-6 md:flex-row">
@@ -34,48 +59,47 @@ export function ApplicationCard({ application }) {
                   to={ROUTES.JOB_DETAIL.replace(':jobId', application.jobId)}
                   className="hover:text-slate-900"
                 >
-                  {application.title}
+                  {title}
                 </Link>
               </h3>
               <p className="mb-2 text-sm text-gray-500">
-                <Link
-                  to={ROUTES.COMPANIES}
-                  className="hover:text-slate-900"
-                >
-                  {application.company}
-                </Link>
+                <span className="font-medium text-gray-700">{company}</span>
               </p>
             </div>
-            {application.status && (
+            {status && (
               <span
-                className={`self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  statusStyles[application.statusKey]
-                }`}
+                className={`self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeStyle}`}
               >
-                {application.status}
+                {statusLabel}
               </span>
             )}
           </div>
 
           <div className="mb-4 flex flex-wrap items-center gap-4 text-sm text-gray-500">
-            <span className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              {application.location}
-            </span>
-            <span className="flex items-center gap-1">
-              <Briefcase className="h-4 w-4" />
-              {application.jobType}
-            </span>
-            <span className="flex items-center gap-1">
-              <DollarSign className="h-4 w-4" />
-              {application.salary}
-            </span>
+            {application.location && (
+              <span className="flex items-center gap-1">
+                <MapPin className="h-4 w-4" />
+                {application.location}
+              </span>
+            )}
+            {application.jobType && (
+              <span className="flex items-center gap-1">
+                <Briefcase className="h-4 w-4" />
+                {application.jobType}
+              </span>
+            )}
+            {application.salary && (
+              <span className="flex items-center gap-1">
+                <DollarSign className="h-4 w-4" />
+                {application.salary}
+              </span>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="flex items-center gap-1 text-xs text-gray-500">
               <Clock className="h-3 w-3" />
-              {application.appliedOn}
+              {appliedOn}
             </span>
             <div className="flex items-center gap-2">
               <Link
@@ -85,10 +109,11 @@ export function ApplicationCard({ application }) {
                 <Eye className="mr-2 h-4 w-4" />
                 View Job
               </Link>
-              {application.showWithdraw && (
+              {showWithdraw && (
                 <button
                   type="button"
-                  className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium transition-colors hover:bg-gray-50"
+                  onClick={() => onWithdraw?.(application.id)}
+                  className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium transition-colors hover:bg-gray-50 text-red-600 hover:bg-red-50"
                 >
                   <X className="mr-2 h-4 w-4" />
                   Withdraw
@@ -103,3 +128,4 @@ export function ApplicationCard({ application }) {
 }
 
 export default ApplicationCard;
+

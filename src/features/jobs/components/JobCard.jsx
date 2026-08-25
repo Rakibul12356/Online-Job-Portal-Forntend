@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Clock, MapPin, Users } from 'lucide-react';
+import { Clock, MapPin, Users, Briefcase } from 'lucide-react';
 import { ROUTES } from '@/constants';
 
 export function JobCard({ job, onApply }) {
-  const Icon = job.icon;
+  const Icon = job.icon || Briefcase;
 
   return (
     <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
@@ -49,7 +49,7 @@ export function JobCard({ job, onApply }) {
           <p className="line-clamp-2 text-sm text-gray-500">{job.description}</p>
 
           <div className="flex flex-wrap gap-2">
-            {job.tags.map((tag, index) => (
+            {(job.tags || job.skills || []).map((tag, index) => (
               <span
                 key={tag}
                 className={
@@ -66,11 +66,11 @@ export function JobCard({ job, onApply }) {
           <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
             <div className="flex items-center gap-4">
               <span className="text-sm font-semibold text-slate-900">
-                {job.salary}
+                {job.salary || (job.salaryMin && job.salaryMax ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()} / yr` : 'Salary Negotiable')}
               </span>
               <span className="flex items-center gap-1 text-xs text-gray-500">
                 <Users className="h-4 w-4" />
-                {job.applicants} applicants
+                {job.applicants ?? 0} applicants
               </span>
             </div>
             <div className="flex gap-2">

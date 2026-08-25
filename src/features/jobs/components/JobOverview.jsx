@@ -8,36 +8,43 @@ import {
 } from 'lucide-react';
 
 const overviewItems = [
-  { key: 'jobType', label: 'Job Type', icon: Briefcase, getValue: (job) => job.jobType },
+  { key: 'jobType', label: 'Job Type', icon: Briefcase, getValue: (job) => job.jobType || 'Full-time' },
   {
     key: 'location',
     label: 'Location',
     icon: MapPin,
-    getValue: (job) => job.locationDetail,
+    getValue: (job) => job.locationDetail || job.city || job.location || 'Remote',
   },
   {
     key: 'salary',
     label: 'Salary',
     icon: DollarSign,
-    getValue: (job) => job.salaryDetail,
+    getValue: (job) => {
+      if (job.salaryDetail) return job.salaryDetail;
+      if (job.salary) return job.salary;
+      if (job.salaryMin && job.salaryMax) {
+        return `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()} per year`;
+      }
+      return 'Salary Negotiable';
+    },
   },
   {
     key: 'experience',
     label: 'Experience',
     icon: BarChart3,
-    getValue: (job) => job.experience,
+    getValue: (job) => job.experience || 'Entry level',
   },
   {
     key: 'deadline',
     label: 'Application Deadline',
     icon: Calendar,
-    getValue: (job) => job.deadline,
+    getValue: (job) => job.deadline ? new Date(job.deadline).toLocaleDateString() : 'N/A',
   },
   {
     key: 'applicants',
     label: 'Applicants',
     icon: Users,
-    getValue: (job) => `${job.applicants} applications`,
+    getValue: (job) => `${job.applicants ?? 0} applications`,
   },
 ];
 

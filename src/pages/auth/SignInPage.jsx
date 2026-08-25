@@ -28,11 +28,11 @@ export function SignInPage() {
     }
   }, [isAuthenticated, navigate]);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setError('');
 
-    const result = login(email, password);
+    const result = await login(email, password);
     if (result.success) {
       navigate(ROUTES.DASHBOARD);
       return;

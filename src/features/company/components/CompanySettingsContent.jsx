@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Building2,
@@ -13,10 +13,12 @@ import {
   Share2,
   Shield,
   Upload,
+  Trash2,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
+import { employerService } from '@/services';
+import { sanitizeMediaUrl } from '@/config/env';
 import {
-  companySettingsData,
   companySizeOptions,
   companyTypeOptions,
   settingsNavItems,
@@ -42,27 +44,32 @@ const socialFields = [
   { id: 'github', label: 'GitHub Organization', icon: Code },
 ];
 
-export function CompanySettingsContent({ user }) {
+export function CompanySettingsContent({ user, settings }) {
   const [activeSection, setActiveSection] = useState('company-info');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [logoLoading, setLogoLoading] = useState(false);
+  const logoInputRef = useRef(null);
+
   const [form, setForm] = useState({
-    companyName: user?.name ?? companySettingsData.companyName,
-    industry: companySettingsData.industry,
-    companySize: companySettingsData.companySize,
-    companyType: companySettingsData.companyType,
-    website: companySettingsData.website,
-    founded: companySettingsData.founded,
-    about: companySettingsData.about,
-    city: companySettingsData.city,
-    state: companySettingsData.state,
-    country: companySettingsData.country,
-    phone: companySettingsData.phone,
-    hrEmail: companySettingsData.hrEmail,
-    supportEmail: companySettingsData.supportEmail,
-    linkedin: companySettingsData.linkedin,
-    twitter: companySettingsData.twitter,
-    facebook: companySettingsData.facebook,
-    instagram: companySettingsData.instagram,
-    github: companySettingsData.github,
+    companyName: settings?.companyName || user?.name || '',
+    industry: settings?.industry || '',
+    companySize: settings?.companySize || '',
+    companyType: settings?.companyType || '',
+    website: settings?.website || '',
+    founded: settings?.founded || '',
+    about: settings?.about || '',
+    city: settings?.location?.city || '',
+    state: settings?.location?.state || '',
+    country: settings?.location?.country || '',
+    phone: settings?.contact?.phone || '',
+    hrEmail: settings?.contact?.hrEmail || '',
+    supportEmail: settings?.contact?.supportEmail || '',
+    linkedin: settings?.social?.linkedin || '',
+    twitter: settings?.social?.twitter || '',
+    facebook: settings?.social?.facebook || '',
+    instagram: settings?.social?.instagram || '',
+    github: settings?.social?.github || '',
   });
 
   function updateField(field, value) {
@@ -77,11 +84,88 @@ export function CompanySettingsContent({ user }) {
     }
   }
 
-  function handleSubmit(event) {
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoLoading(true);
+    try {
+      const response = await employerService.uploadLogo(file);
+      if (response.success) {
+        alert('Logo uploaded successfully!');
+        window.location.reload();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to upload logo');
+    } finally {
+      setLogoLoading(false);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!window.confirm('Are you sure you want to remove the logo?')) return;
+    setLogoLoading(true);
+    try {
+      const response = await employerService.removeLogo();
+      if (response.success) {
+        alert('Logo removed successfully!');
+        window.location.reload();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to remove logo');
+    } finally {
+      setLogoLoading(false);
+    }
+  };
+
+  async function handleSubmit(event) {
     event.preventDefault();
+    setSaving(true);
+    setError('');
+    
+    const payload = {
+      companyName: form.companyName,
+      industry: form.industry,
+      companySize: form.companySize,
+      companyType: form.companyType,
+      website: form.website,
+      founded: form.founded,
+      about: form.about,
+      location: {
+        city: form.city,
+        state: form.state,
+        country: form.country,
+      },
+      contact: {
+        phone: form.phone,
+        hrEmail: form.hrEmail,
+        supportEmail: form.supportEmail,
+      },
+      social: {
+        linkedin: form.linkedin,
+        twitter: form.twitter,
+        facebook: form.facebook,
+        instagram: form.instagram,
+        github: form.github,
+      },
+    };
+
+    try {
+      const response = await employerService.updateCompanySettings(payload);
+      if (response.success) {
+        alert('Company settings saved successfully!');
+        window.location.reload();
+      } else {
+        setError(response.message || 'Failed to save settings');
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Error occurred while saving settings');
+    } finally {
+      setSaving(false);
+    }
   }
 
-  const displayName = user?.name ?? companySettingsData.name;
+  const displayName = form.companyName || user?.name || 'Company Profile';
 
   return (
     <div>
@@ -129,33 +213,19 @@ export function CompanySettingsContent({ user }) {
 
           <div className="mt-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col items-center text-center">
-              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600">
-                <Building2 className="h-10 w-10 text-white" />
+              <div className="mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gray-100 border border-gray-200">
+                {settings?.logoUrl ? (
+                  <img src={sanitizeMediaUrl(settings.logoUrl)} alt={displayName} className="h-full w-full object-cover" />
+                ) : (
+                  <Building2 className="h-10 w-10 text-gray-500" />
+                )}
               </div>
               <h3 className="mb-1 font-semibold">{displayName}</h3>
-              <p className="mb-4 text-xs text-gray-500">
-                {companySettingsData.membership}
-              </p>
-              <div className="w-full space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Active Jobs</span>
-                  <span className="font-medium">
-                    {companySettingsData.stats.activeJobs}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Total Applicants</span>
-                  <span className="font-medium">
-                    {companySettingsData.stats.totalApplicants}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Member Since</span>
-                  <span className="font-medium">
-                    {companySettingsData.stats.memberSince}
-                  </span>
-                </div>
-              </div>
+              {settings?.industry && (
+                <p className="mb-4 text-xs text-gray-500">
+                  {settings.industry}
+                </p>
+              )}
             </div>
           </div>
         </aside>
@@ -171,22 +241,53 @@ export function CompanySettingsContent({ user }) {
               <p className="mb-2 text-sm font-medium">Company Logo</p>
               <div className="flex items-start gap-6">
                 <div className="relative">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-                    <Building2 className="h-12 w-12 text-white" />
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    disabled={logoLoading}
+                  />
+                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-lg bg-gray-100 border border-gray-200">
+                    {settings?.logoUrl ? (
+                      <img src={sanitizeMediaUrl(settings.logoUrl)} alt="Logo" className="h-full w-full object-cover" />
+                    ) : (
+                      <Building2 className="h-12 w-12 text-gray-500" />
+                    )}
                   </div>
                   <button
                     type="button"
-                    className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg hover:bg-slate-800"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={logoLoading}
+                    className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg hover:bg-slate-800 transition-transform hover:scale-105 cursor-pointer disabled:opacity-50"
                   >
                     <Camera className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="flex-1">
-                  <label className="inline-flex cursor-pointer items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium hover:bg-gray-50">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Logo
-                    <input type="file" className="hidden" accept="image/*" />
-                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      disabled={logoLoading}
+                      className="flex cursor-pointer items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Logo
+                    </button>
+                    {settings?.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        disabled={logoLoading}
+                        className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50 text-red-600 disabled:opacity-50"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remove Logo
+                      </button>
+                    )}
+                  </div>
                   <p className="mt-2 text-xs text-gray-500">
                     Recommended size: 200x200px. Max file size: 2MB. Supported
                     formats: JPG, PNG, SVG
@@ -404,14 +505,22 @@ export function CompanySettingsContent({ user }) {
             </div>
           </section>
 
-          <div className="flex items-center justify-between gap-4 pt-4">
-            <button
-              type="submit"
-              className="flex items-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-            >
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </button>
+          <div className="flex flex-col gap-4 pt-4">
+            {error && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="flex items-center justify-between gap-4">
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex items-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

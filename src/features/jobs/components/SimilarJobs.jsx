@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Briefcase } from 'lucide-react';
 import { ROUTES } from '@/constants';
 
 export function SimilarJobs({ jobs }) {
@@ -9,7 +10,7 @@ export function SimilarJobs({ jobs }) {
       <h2 className="mb-4 text-xl font-semibold">Similar Jobs</h2>
       <div className="space-y-4">
         {jobs.map((job) => {
-          const Icon = job.icon;
+          const Icon = job.icon || Briefcase;
           return (
             <article
               key={job.id}

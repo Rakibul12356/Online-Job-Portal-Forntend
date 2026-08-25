@@ -7,6 +7,10 @@
     box-sizing: border-box;
   }
 
+  button {
+    cursor: pointer;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

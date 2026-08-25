@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bookmark,
@@ -9,25 +10,82 @@ import {
   MapPin,
   Settings,
   User,
+  Briefcase,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
-import {
-  recentApplications,
-  recommendedJobs,
-  statusStyles,
-} from '../data/mockDashboard';
+import { seekerService } from '@/services';
+import { LoadingSpinner } from '@/components';
 
-function StatusBadge({ label, variant }) {
+const statusBadgeStyles = {
+  pending: 'bg-amber-100 text-amber-800 border border-amber-200',
+  shortlisted: 'bg-green-100 text-green-800 border border-green-200',
+  interviewed: 'bg-blue-100 text-blue-800 border border-blue-200',
+  rejected: 'bg-red-100 text-red-800 border border-red-200',
+  withdrawn: 'bg-gray-100 text-gray-800 border border-gray-200',
+};
+
+const statusLabels = {
+  pending: 'Pending Review',
+  shortlisted: 'Shortlisted',
+  interviewed: 'Interview Scheduled',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
+};
+
+function StatusBadge({ status }) {
+  const badgeStyle = statusBadgeStyles[status] || 'bg-gray-100 text-gray-800';
+  const label = statusLabels[status] || status;
   return (
-    <span
-      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[variant]}`}
-    >
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeStyle}`}>
       {label}
     </span>
   );
 }
 
-export function DashboardContent({ firstName = 'John' }) {
+export function DashboardContent({ firstName = 'User' }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function loadDashboard() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await seekerService.getDashboard();
+        if (response.success && response.data) {
+          setData(response.data);
+        } else {
+          setError('Failed to fetch dashboard statistics');
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard:', err);
+        setError(err.message || 'Error connecting to API server');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDashboard();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg bg-red-50 p-4 text-center text-red-600">
+        {error}
+      </div>
+    );
+  }
+
+  const { stats = {}, recentApplied = [], recommendedJobs = [] } = data || {};
+
   return (
     <>
       <div className="mb-8">
@@ -35,6 +93,21 @@ export function DashboardContent({ firstName = 'John' }) {
         <p className="text-gray-500">
           Here&apos;s what&apos;s happening with your job search today.
         </p>
+      </div>
+
+      {/* Stats Section */}
+      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {[
+          { label: 'Total Applications', value: stats.totalApplications ?? 0, color: 'text-slate-900 border-gray-200' },
+          { label: 'Shortlisted', value: stats.shortlisted ?? 0, color: 'text-green-600 border-green-100 bg-green-50/30' },
+          { label: 'Pending Reviews', value: stats.pendingReviews ?? 0, color: 'text-amber-600 border-amber-100 bg-amber-50/30' },
+          { label: 'Saved Jobs', value: stats.savedJobs ?? 0, color: 'text-blue-600 border-blue-100 bg-blue-50/30' },
+        ].map((item) => (
+          <div key={item.label} className={`rounded-lg border bg-white p-4 shadow-sm ${item.color}`}>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{item.label}</p>
+            <p className="mt-1 text-2xl font-bold">{item.value}</p>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -49,74 +122,59 @@ export function DashboardContent({ firstName = 'John' }) {
                 View All
               </Link>
             </div>
-            <div className="space-y-4">
-              {recentApplications.map((app) => {
-                const Icon = app.icon;
-                return (
-                  <div
-                    key={app.id}
-                    className="rounded-lg border border-gray-200 p-4"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="shrink-0">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
-                          <Icon className="h-6 w-6 text-slate-900" />
-                        </div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex items-start justify-between gap-2">
-                          <div>
-                            <h3 className="mb-1 font-semibold">
-                              <Link
-                                to={ROUTES.JOB_DETAIL.replace(':jobId', app.jobId)}
-                                className="hover:underline"
-                              >
-                                {app.title}
-                              </Link>
-                            </h3>
-                            <p className="text-sm text-gray-500">{app.company}</p>
+            
+            {recentApplied.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-500">No applications submitted yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {recentApplied.map((app) => {
+                  return (
+                    <div
+                      key={app.id}
+                      className="rounded-lg border border-gray-200 p-4"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="shrink-0">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
+                            <Briefcase className="h-6 w-6 text-slate-900" />
                           </div>
-                          <StatusBadge
-                            label={app.status}
-                            variant={app.statusVariant}
-                          />
                         </div>
-                        <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {app.location}
-                          </span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {app.appliedOn}
-                          </span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            {app.salary}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Link
-                            to={ROUTES.JOB_DETAIL.replace(':jobId', app.jobId)}
-                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
-                          >
-                            {app.primaryAction}
-                          </Link>
-                          <button
-                            type="button"
-                            className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100"
-                          >
-                            {app.secondaryAction}
-                          </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex items-start justify-between gap-2">
+                            <div>
+                              <h3 className="mb-1 font-semibold">
+                                <Link
+                                  to={ROUTES.JOB_DETAIL.replace(':jobId', app.jobId)}
+                                  className="hover:underline"
+                                >
+                                  {app.jobTitle}
+                                </Link>
+                              </h3>
+                              <p className="text-sm text-gray-500">{app.company}</p>
+                            </div>
+                            <StatusBadge status={app.status} />
+                          </div>
+                          <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Applied on {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : ''}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Link
+                              to={ROUTES.JOB_DETAIL.replace(':jobId', app.jobId)}
+                              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
+                            >
+                              View Job
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
@@ -129,69 +187,71 @@ export function DashboardContent({ firstName = 'John' }) {
                 Browse All Jobs
               </Link>
             </div>
-            <div className="space-y-4">
-              {recommendedJobs.map((job) => {
-                const Icon = job.icon;
-                return (
-                  <article
-                    key={job.id}
-                    className="rounded-lg border border-gray-200 p-4 transition-shadow hover:shadow-md"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="shrink-0">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
-                          <Icon className="h-6 w-6 text-slate-900" />
-                        </div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="mb-1 font-semibold">{job.title}</h3>
-                        <p className="mb-2 text-sm text-gray-500">{job.company}</p>
-                        <p className="mb-3 text-sm text-gray-500">{job.description}</p>
-                        <div className="mb-3 flex flex-wrap gap-2">
-                          {job.tags.map((tag, index) => (
-                            <span
-                              key={tag}
-                              className={
-                                index === 0
-                                  ? 'rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium'
-                                  : 'rounded-full border border-gray-300 px-2.5 py-0.5 text-xs font-medium text-gray-700'
-                              }
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                          <div className="flex items-center gap-3 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {job.location}
-                            </span>
-                            <span className="font-semibold text-slate-900">
-                              {job.salary}
-                            </span>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
-                            >
-                              View Details
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                            >
-                              Apply Now
-                            </button>
+            
+            {recommendedJobs.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-500">No recommendations found.</p>
+            ) : (
+              <div className="space-y-4">
+                {recommendedJobs.map((job) => {
+                  return (
+                    <article
+                      key={job.id}
+                      className="rounded-lg border border-gray-200 p-4 transition-shadow hover:shadow-md"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="shrink-0">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
+                            <Briefcase className="h-6 w-6 text-slate-900" />
                           </div>
                         </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="mb-1 font-semibold">{job.title}</h3>
+                          <p className="mb-2 text-sm text-gray-500">{job.company}</p>
+                          <p className="mb-3 text-sm text-gray-500 line-clamp-2">{job.description}</p>
+                          <div className="mb-3 flex flex-wrap gap-2">
+                            {(job.tags || []).map((tag, index) => (
+                              <span
+                                key={tag}
+                                className={
+                                  index === 0
+                                    ? 'rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium'
+                                    : 'rounded-full border border-gray-300 px-2.5 py-0.5 text-xs font-medium text-gray-700'
+                                }
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              {job.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {job.location}
+                                </span>
+                              )}
+                              {job.salary && (
+                                <span className="font-semibold text-slate-900">
+                                  {job.salary}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Link
+                                to={ROUTES.JOB_DETAIL.replace(':jobId', job.id)}
+                                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
+                              >
+                                View Details
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -243,3 +303,4 @@ export function DashboardContent({ firstName = 'John' }) {
 }
 
 export default DashboardContent;
+

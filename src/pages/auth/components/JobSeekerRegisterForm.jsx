@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell,
   Briefcase,
@@ -14,6 +14,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
+import { useAuth } from '@/context';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900';
@@ -21,13 +22,61 @@ const inputClass =
 export function JobSeekerRegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { registerSeeker } = useAuth();
+  const navigate = useNavigate();
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    const formData = new FormData(event.currentTarget);
+    const data = Object.fromEntries(formData.entries());
+
+    if (data.password !== data.confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    const payload = {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      experience: data.experience,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+      termsAccepted: data.terms === 'on',
+    };
+
+    const result = await registerSeeker(payload);
+    setLoading(false);
+    if (result.success) {
+      setSuccess('Registration successful! Redirecting to Sign In...');
+      setTimeout(() => {
+        navigate(ROUTES.SIGN_IN);
+      }, 1500);
+    } else {
+      setError(result.message);
+    }
   }
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm md:p-10">
+      {error && (
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-600" role="status">
+          {success}
+        </p>
+      )}
       <form className="space-y-5" onSubmit={handleSubmit}>
         <div className="space-y-2">
           <label htmlFor="name" className="text-sm font-medium">

@@ -152,7 +152,7 @@ export function CompanyProfileContent({ user }) {
                         <span>•</span>
                         <span className="flex items-center gap-1">
                           <Users className="h-4 w-4" />
-                          {job.applicants} applicants
+                          {job.applicants ?? 0} applicants
                         </span>
                       </div>
                     </div>
@@ -166,7 +166,7 @@ export function CompanyProfileContent({ user }) {
                   </div>
                   <p className="mb-3 text-sm text-gray-500">{job.description}</p>
                   <div className="mb-3 flex flex-wrap gap-2">
-                    {job.tags.map((tag, index) => (
+                    {(job.tags || job.skills || []).map((tag, index) => (
                       <span
                         key={tag}
                         className={
@@ -181,11 +181,11 @@ export function CompanyProfileContent({ user }) {
                   </div>
                   <div className="flex flex-col gap-3 border-t border-gray-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-sm font-semibold text-slate-900">
-                      {job.salary}
+                      {job.salary || (job.salaryMin && job.salaryMax ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()} / yr` : 'Salary Negotiable')}
                     </span>
                     <div className="flex gap-2">
                       <Link
-                        to={ROUTES.JOB_DETAIL.replace(':jobId', job.jobId)}
+                        to={ROUTES.JOB_DETAIL.replace(':jobId', job.id || job.jobId)}
                         className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-50"
                       >
                         View Details

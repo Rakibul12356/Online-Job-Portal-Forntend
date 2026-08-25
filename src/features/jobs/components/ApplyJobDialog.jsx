@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FileText, Send, Trash2, Upload, X } from 'lucide-react';
+import { jobsService } from '@/services';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_COVER_LENGTH = 500;
@@ -13,12 +14,18 @@ function formatFileSize(bytes) {
 export function ApplyJobDialog({ isOpen, job, onClose }) {
   const [resumeFile, setResumeFile] = useState(null);
   const [coverMessage, setCoverMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) {
       setResumeFile(null);
       setCoverMessage('');
+      setError('');
+      setSuccess('');
+      setSubmitting(false);
     }
   }, [isOpen]);
 
@@ -58,13 +65,35 @@ export function ApplyJobDialog({ isOpen, job, onClose }) {
     event.target.value = '';
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!resumeFile) {
-      alert('Please upload your resume before submitting.');
+      setError('Please upload your resume before submitting.');
       return;
     }
 
-    onClose();
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await jobsService.applyToJob(job.id, {
+        resume: resumeFile,
+        coverMessage,
+      });
+
+      if (response.success) {
+        setSuccess('Application submitted successfully!');
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+      } else {
+        setError(response.message || 'Failed to submit application');
+      }
+    } catch (err) {
+      setError(err.message || 'An error occurred during submission.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -101,6 +130,17 @@ export function ApplyJobDialog({ isOpen, job, onClose }) {
               <X className="h-5 w-5" />
             </button>
           </div>
+
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          )}
+          {success && (
+            <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-600" role="status">
+              {success}
+            </p>
+          )}
 
           <div className="space-y-3">
             <label className="text-sm font-medium">
@@ -207,17 +247,19 @@ export function ApplyJobDialog({ isOpen, job, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
+              disabled={submitting}
+              className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSubmit}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+              disabled={submitting}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
-              Submit Application
+              {submitting ? 'Submitting...' : 'Submit Application'}
             </button>
           </div>
         </div>

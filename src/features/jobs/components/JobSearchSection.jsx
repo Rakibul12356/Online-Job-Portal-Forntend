@@ -12,14 +12,13 @@ const filterLabels = {
   skills: 'Skills',
 };
 
-export function JobSearchSection() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState({
-    jobType: [],
-    experienceLevel: [],
-    salaryRange: [],
-    skills: [],
-  });
+export function JobSearchSection({
+  searchQuery,
+  setSearchQuery,
+  filters,
+  setFilters,
+  onSearch,
+}) {
   const [openDropdown, setOpenDropdown] = useState(null);
 
   function toggleDropdown(key) {
@@ -27,17 +26,21 @@ export function JobSearchSection() {
   }
 
   function updateFilter(key, values) {
-    setFilters((prev) => ({ ...prev, [key]: values }));
+    const updated = { ...filters, [key]: values };
+    setFilters(updated);
+    onSearch?.(searchQuery, updated);
   }
 
   function clearAllFilters() {
-    setFilters({
+    const cleared = {
       jobType: [],
       experienceLevel: [],
       salaryRange: [],
       skills: [],
-    });
+    };
+    setFilters(cleared);
     setSearchQuery('');
+    onSearch?.('', cleared);
   }
 
   return (
@@ -52,6 +55,11 @@ export function JobSearchSection() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      onSearch?.(searchQuery, filters);
+                    }
+                  }}
                   placeholder="Search jobs by title, skill..."
                   className="w-full rounded-md border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-transparent"
                 />
@@ -60,6 +68,7 @@ export function JobSearchSection() {
 
             <button
               type="button"
+              onClick={() => onSearch?.(searchQuery, filters)}
               className="flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
             >
               <Search className="h-4 w-4" />

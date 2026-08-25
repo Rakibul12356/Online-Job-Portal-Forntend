@@ -2,30 +2,41 @@ import { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { dateFilters, statusFilters } from '../data/mockApplications';
 
-export function ApplicationsFilters({ onReset }) {
-  const [selectedStatus, setSelectedStatus] = useState(['all']);
-  const [selectedDate, setSelectedDate] = useState('all');
-
+export function ApplicationsFilters({
+  selectedStatus,
+  setSelectedStatus,
+  selectedDate,
+  setSelectedDate,
+  onFilterChange,
+  onReset,
+}) {
   function toggleStatus(id) {
+    let nextStatus = [];
     if (id === 'all') {
-      setSelectedStatus(['all']);
-      return;
-    }
-
-    setSelectedStatus((prev) => {
-      const withoutAll = prev.filter((item) => item !== 'all');
+      nextStatus = ['all'];
+    } else {
+      const withoutAll = selectedStatus.filter((item) => item !== 'all');
       if (withoutAll.includes(id)) {
         const next = withoutAll.filter((item) => item !== id);
-        return next.length ? next : ['all'];
+        nextStatus = next.length ? next : ['all'];
+      } else {
+        nextStatus = [...withoutAll, id];
       }
-      return [...withoutAll, id];
-    });
+    }
+    setSelectedStatus(nextStatus);
+    onFilterChange?.(nextStatus, selectedDate);
+  }
+
+  function handleDateChange(id) {
+    setSelectedDate(id);
+    onFilterChange?.(selectedStatus, id);
   }
 
   function handleReset() {
     setSelectedStatus(['all']);
     setSelectedDate('all');
     onReset?.();
+    onFilterChange?.(['all'], 'all');
   }
 
   return (
@@ -66,7 +77,7 @@ export function ApplicationsFilters({ onReset }) {
                   type="radio"
                   name="date"
                   checked={selectedDate === id}
-                  onChange={() => setSelectedDate(id)}
+                  onChange={() => handleDateChange(id)}
                   className="border-gray-300"
                 />
                 <span className="text-sm">{label}</span>
