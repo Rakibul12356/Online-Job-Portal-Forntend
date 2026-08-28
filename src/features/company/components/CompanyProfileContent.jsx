@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   Bookmark,
@@ -18,6 +19,9 @@ import {
   Users,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
+import { useAuth } from '@/context';
+import { checkCanApplyJob } from '@/utils';
+import { ApplyJobDialog } from '@/features/jobs/components';
 import { companyProfileData } from '../data/mockCompanyProfile';
 
 const valueIcons = {
@@ -36,7 +40,17 @@ const socialIcons = {
 };
 
 export function CompanyProfileContent({ user }) {
+  const navigate = useNavigate();
+  const { user: authUser, isAuthenticated } = useAuth();
+  const [applyJob, setApplyJob] = useState(null);
   const displayName = user?.name ?? companyProfileData.name;
+
+  const handleApply = (job) => {
+    if (checkCanApplyJob({ user: authUser, isAuthenticated, navigate })) {
+      setApplyJob(job);
+    }
+  };
+
 
   return (
     <>
@@ -192,6 +206,7 @@ export function CompanyProfileContent({ user }) {
                       </Link>
                       <button
                         type="button"
+                        onClick={() => handleApply(job)}
                         className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-800"
                       >
                         Apply Now
@@ -290,8 +305,15 @@ export function CompanyProfileContent({ user }) {
           </section>
         </div>
       </div>
+
+      <ApplyJobDialog
+        isOpen={Boolean(applyJob)}
+        job={applyJob}
+        onClose={() => setApplyJob(null)}
+      />
     </>
   );
 }
 
 export default CompanyProfileContent;
+

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ApplyJobDialog,
   JobBreadcrumb,
@@ -13,14 +13,25 @@ import {
 import { jobsService } from '@/services';
 import { ROUTES } from '@/constants';
 import { LoadingSpinner } from '@/components';
+import { useAuth } from '@/context';
+import { checkCanApplyJob } from '@/utils';
 
 export function JobDetailPage() {
   const { jobId } = useParams();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [job, setJob] = useState(null);
   const [similarJobs, setSimilarJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [applyJob, setApplyJob] = useState(null);
+
+  const handleApply = (jobToApply) => {
+    if (checkCanApplyJob({ user, isAuthenticated, navigate })) {
+      setApplyJob(jobToApply);
+    }
+  };
+
 
   useEffect(() => {
     async function loadJobDetails() {
@@ -96,7 +107,7 @@ export function JobDetailPage() {
         </div>
 
         <div className="lg:col-span-1">
-          <JobDetailSidebar job={job} onApply={setApplyJob} />
+          <JobDetailSidebar job={job} onApply={handleApply} />
         </div>
       </div>
 

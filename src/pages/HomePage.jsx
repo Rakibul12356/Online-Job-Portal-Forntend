@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ApplyJobDialog,
   HeroSection,
@@ -8,10 +9,15 @@ import {
 } from '@/features/jobs/components';
 import { jobsService } from '@/services';
 import { LoadingSpinner } from '@/components';
+import { useAuth } from '@/context';
+import { checkCanApplyJob } from '@/utils';
 
 export function HomePage() {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [applyJob, setApplyJob] = useState(null);
   const [jobs, setJobs] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [total, setTotal] = useState(0);
@@ -101,6 +107,12 @@ export function HomePage() {
     setFilters(updatedFilters);
   }
 
+  const handleApply = (job) => {
+    if (checkCanApplyJob({ user, isAuthenticated, navigate })) {
+      setApplyJob(job);
+    }
+  };
+
   return (
     <>
       <HeroSection />
@@ -130,7 +142,7 @@ export function HomePage() {
       ) : (
         <div className="grid gap-4 md:gap-6">
           {jobs.map((job) => (
-            <JobCard key={job.id} job={job} onApply={setApplyJob} />
+            <JobCard key={job.id} job={job} onApply={handleApply} />
           ))}
         </div>
       )}

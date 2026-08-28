@@ -15,6 +15,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants';
 import { useAuth } from '@/context';
 import { chatService } from '@/services';
+import { checkCanApplyJob } from '@/utils';
 
 export function JobDetailSidebar({ job, onApply }) {
   const Icon = job.icon || Building2;
@@ -22,6 +23,13 @@ export function JobDetailSidebar({ job, onApply }) {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [chatLoading, setChatLoading] = useState(false);
+
+  const handleApplyClick = () => {
+    if (checkCanApplyJob({ user, isAuthenticated, navigate })) {
+      onApply(job);
+    }
+  };
+
 
   const handleChatWithEmployer = async () => {
     if (!isAuthenticated) {
@@ -52,7 +60,7 @@ export function JobDetailSidebar({ job, onApply }) {
 
           <button
             type="button"
-            onClick={() => onApply(job)}
+            onClick={handleApplyClick}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-slate-800"
           >
             <Send className="h-4 w-4" />

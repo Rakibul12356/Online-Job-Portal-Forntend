@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Send, Trash2, Upload, X } from 'lucide-react';
 import { jobsService } from '@/services';
-import { useToast } from '@/context';
+import { useAuth, useToast } from '@/context';
+import { checkCanApplyJob } from '@/utils';
+
 
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -15,6 +18,8 @@ function formatFileSize(bytes) {
 
 export function ApplyJobDialog({ isOpen, job, onClose }) {
   const toast = useToast();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [resumeFile, setResumeFile] = useState(null);
   const [coverMessage, setCoverMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -29,8 +34,12 @@ export function ApplyJobDialog({ isOpen, job, onClose }) {
       setError('');
       setSuccess('');
       setSubmitting(false);
+    } else {
+      if (!checkCanApplyJob({ user, isAuthenticated, navigate })) {
+        onClose();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, user, isAuthenticated, navigate, onClose]);
 
   useEffect(() => {
     function handleEscape(event) {
@@ -69,6 +78,11 @@ export function ApplyJobDialog({ isOpen, job, onClose }) {
   }
 
   async function handleSubmit() {
+    if (!checkCanApplyJob({ user, isAuthenticated, navigate })) {
+      onClose();
+      return;
+    }
+
     if (!resumeFile) {
       setError('Please upload your resume before submitting.');
       return;
