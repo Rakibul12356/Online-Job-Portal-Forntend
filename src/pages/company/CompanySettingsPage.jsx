@@ -21,11 +21,17 @@ export function CompanySettingsPage() {
         if (response.success && response.data) {
           setSettings(response.data);
         } else {
-          setError('Failed to fetch company settings details');
+          setSettings({
+            companyName: user?.name || '',
+            accountEmail: user?.email || '',
+          });
         }
       } catch (err) {
         console.error('Error fetching settings:', err);
-        setError(err.message || 'Error loading settings from server');
+        setSettings({
+          companyName: user?.name || '',
+          accountEmail: user?.email || '',
+        });
       } finally {
         setLoading(false);
       }
@@ -54,16 +60,7 @@ export function CompanySettingsPage() {
     );
   }
 
-  if (error || !settings) {
-    return (
-      <div className="mx-auto max-w-2xl py-16 text-center">
-        <h1 className="text-2xl font-bold text-red-600">Error Loading Settings</h1>
-        <p className="mt-2 text-gray-500">{error || 'An error occurred.'}</p>
-      </div>
-    );
-  }
-
-  return <CompanySettingsContent user={user} settings={settings} />;
+  return <CompanySettingsContent user={user} settings={settings || { companyName: user?.name, accountEmail: user?.email }} />;
 }
 
 export default CompanySettingsPage;
