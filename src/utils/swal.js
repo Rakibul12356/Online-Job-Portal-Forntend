@@ -1,9 +1,111 @@
-// Helper function to safely get the Swal instance
+// SweetAlert2 Integration Utilities
+
 export function getSwal() {
   if (typeof window !== 'undefined' && window.Swal) {
     return window.Swal;
   }
   return null;
+}
+
+/**
+ * Show a sleek SweetAlert2 confirmation dialog
+ * @param {Object} options
+ * @param {string} options.title
+ * @param {string} options.text
+ * @param {string} [options.confirmButtonText='Yes, Proceed']
+ * @param {string} [options.cancelButtonText='Cancel']
+ * @param {string} [options.icon='warning'] - 'warning' | 'error' | 'question' | 'info' | 'success'
+ * @param {boolean} [options.isDanger=false]
+ * @returns {Promise<boolean>} Resolves to true if confirmed, false otherwise
+ */
+export async function showConfirmDialog({
+  title = 'Are you sure?',
+  text = '',
+  confirmButtonText = 'Yes, Proceed',
+  cancelButtonText = 'Cancel',
+  icon = 'warning',
+  isDanger = false,
+}) {
+  const Swal = getSwal();
+  if (!Swal) {
+    return window.confirm(text || title);
+  }
+
+  const result = await Swal.fire({
+    title,
+    text,
+    icon,
+    showCancelButton: true,
+    confirmButtonText,
+    cancelButtonText,
+    confirmButtonColor: isDanger ? '#e11d48' : '#0f172a',
+    cancelButtonColor: '#64748b',
+    reverseButtons: true,
+    focusCancel: isDanger,
+    customClass: {
+      popup: 'rounded-2xl shadow-2xl',
+      title: 'text-xl font-bold text-gray-900',
+      htmlContainer: 'text-sm text-gray-600',
+      confirmButton: 'rounded-xl px-5 py-2.5 font-semibold text-sm shadow-sm',
+      cancelButton: 'rounded-xl px-5 py-2.5 font-semibold text-sm',
+    },
+  });
+
+  return result.isConfirmed;
+}
+
+/**
+ * Show SweetAlert2 error modal
+ * @param {string} title
+ * @param {string} [text='']
+ */
+export async function showErrorAlert(title = 'Error', text = '') {
+  const Swal = getSwal();
+  if (!Swal) {
+    alert(text ? `${title}: ${text}` : title);
+    return;
+  }
+
+  await Swal.fire({
+    title,
+    text,
+    icon: 'error',
+    confirmButtonText: 'OK',
+    confirmButtonColor: '#0f172a',
+    customClass: {
+      popup: 'rounded-2xl shadow-2xl',
+      title: 'text-xl font-bold text-gray-900',
+      htmlContainer: 'text-sm text-gray-600',
+      confirmButton: 'rounded-xl px-5 py-2.5 font-semibold text-sm',
+    },
+  });
+}
+
+/**
+ * Show SweetAlert2 info or warning modal
+ * @param {string} title
+ * @param {string} [text='']
+ */
+export async function showWarningAlert(title = 'Notice', text = '') {
+  const Swal = getSwal();
+  if (!Swal) {
+    alert(text ? `${title}: ${text}` : title);
+    return;
+  }
+
+  await Swal.fire({
+    title,
+    text,
+    icon: 'warning',
+    confirmButtonText: 'Understood',
+    confirmButtonColor: '#0f172a',
+    customClass: {
+      popup: 'rounded-2xl shadow-2xl',
+      title: 'text-xl font-bold text-gray-900',
+      htmlContainer: 'text-sm text-gray-600',
+      confirmButton: 'rounded-xl px-5 py-2.5 font-semibold text-sm',
+    },
+  });
 }
 
 /**
@@ -14,8 +116,8 @@ export function getSwal() {
 export async function showLoginRequiredAlert(navigate, redirectPath = '/signin') {
   const Swal = getSwal();
   if (!Swal) {
-    alert('Please log in as a Job Seeker to apply for this job.');
-    if (navigate) navigate(redirectPath);
+    const ok = window.confirm('Please log in as a Job Seeker to apply for this job. Go to login?');
+    if (ok && navigate) navigate(redirectPath);
     return;
   }
 
@@ -30,7 +132,11 @@ export async function showLoginRequiredAlert(navigate, redirectPath = '/signin')
     cancelButtonColor: '#64748b',
     reverseButtons: true,
     customClass: {
-      popup: 'swal2-border-radius',
+      popup: 'rounded-2xl shadow-2xl',
+      title: 'text-xl font-bold text-gray-900',
+      htmlContainer: 'text-sm text-gray-600',
+      confirmButton: 'rounded-xl px-5 py-2.5 font-semibold text-sm',
+      cancelButton: 'rounded-xl px-5 py-2.5 font-semibold text-sm',
     },
   });
 
@@ -45,7 +151,7 @@ export async function showLoginRequiredAlert(navigate, redirectPath = '/signin')
 export async function showCompanyCannotApplyAlert() {
   const Swal = getSwal();
   if (!Swal) {
-    alert('Company accounts cannot apply for jobs. Only Job Seekers can apply.');
+    alert('Company and Employer accounts cannot apply for jobs. Only Job Seeker accounts can submit applications.');
     return;
   }
 
@@ -53,10 +159,13 @@ export async function showCompanyCannotApplyAlert() {
     title: 'Application Restricted',
     text: 'Company and Employer accounts cannot apply for jobs. Only Job Seeker accounts can submit applications.',
     icon: 'error',
-    confirmButtonText: 'OK',
+    confirmButtonText: 'Understood',
     confirmButtonColor: '#0f172a',
     customClass: {
-      popup: 'swal2-border-radius',
+      popup: 'rounded-2xl shadow-2xl',
+      title: 'text-xl font-bold text-gray-900',
+      htmlContainer: 'text-sm text-gray-600',
+      confirmButton: 'rounded-xl px-5 py-2.5 font-semibold text-sm',
     },
   });
 }

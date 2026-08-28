@@ -18,7 +18,8 @@ import { ROUTES } from '@/constants';
 import { seekerService } from '@/services';
 import { sanitizeMediaUrl } from '@/config/env';
 import { useToast } from '@/context';
-import { formatDate } from '@/utils';
+import { formatDate, showConfirmDialog } from '@/utils';
+
 
 
 const inputClass =
@@ -220,12 +221,19 @@ export function EditProfileContent({ user, profile }) {
                     type="button"
                     disabled={uploadingAvatar || removingAvatar}
                     onClick={async () => {
-                      if (!window.confirm('Remove profile photo?')) return;
+                      const confirmed = await showConfirmDialog({
+                        title: 'Remove Profile Photo?',
+                        text: 'Are you sure you want to remove your profile photo?',
+                        confirmButtonText: 'Yes, Remove Photo',
+                        icon: 'warning',
+                        isDanger: true,
+                      });
+                      if (!confirmed) return;
                       setRemovingAvatar(true);
                       try {
                         const response = await seekerService.deleteAvatar();
                         if (response.success) {
-                          toast.success('Photo removed!');
+                          toast.success('Photo removed successfully!');
                           setTimeout(() => window.location.reload(), 1000);
                         }
                       } catch (err) {

@@ -7,6 +7,8 @@ import { ApplicationsFilters } from './ApplicationsFilters';
 import { ApplicationCard } from './ApplicationCard';
 import { LoadingSpinner } from '@/components';
 import { useToast } from '@/context';
+import { showConfirmDialog } from '@/utils';
+
 
 const sortOptions = ['Newest First', 'Oldest First'];
 
@@ -76,7 +78,15 @@ export function ApplicationsContent() {
   }, []);
 
   const handleWithdraw = async (appId) => {
-    if (!window.confirm('Are you sure you want to withdraw this application?')) return;
+    const confirmed = await showConfirmDialog({
+      title: 'Withdraw Application?',
+      text: 'Are you sure you want to withdraw this application? The employer will no longer review it.',
+      confirmButtonText: 'Yes, Withdraw',
+      icon: 'warning',
+      isDanger: true,
+    });
+    if (!confirmed) return;
+
     setWithdrawingAppId(appId);
     try {
       const response = await seekerService.withdrawApplication(appId);

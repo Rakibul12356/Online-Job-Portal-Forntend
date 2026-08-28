@@ -16,7 +16,8 @@ import { employerService, chatService } from '@/services';
 import { LoadingSpinner } from '@/components';
 import { sanitizeMediaUrl } from '@/config/env';
 import { useToast } from '@/context';
-import { formatDate } from '@/utils';
+import { formatDate, showConfirmDialog } from '@/utils';
+
 
 import {
   dateFilterOptions,
@@ -131,7 +132,15 @@ export function CompanyApplicantsContent() {
   }
 
   const handleUpdateStatus = async (appId, statusVal) => {
-    if (!window.confirm(`Are you sure you want to mark this candidate as ${statusVal}?`)) return;
+    const confirmed = await showConfirmDialog({
+      title: 'Update Candidate Status?',
+      text: `Are you sure you want to mark this candidate as "${statusVal}"?`,
+      confirmButtonText: `Yes, Mark as ${statusVal}`,
+      icon: statusVal === 'rejected' ? 'warning' : 'question',
+      isDanger: statusVal === 'rejected',
+    });
+    if (!confirmed) return;
+
     setUpdatingAppId(appId);
     try {
       const response = await employerService.updateApplicantStatus(appId, statusVal);

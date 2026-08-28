@@ -23,6 +23,8 @@ import { ROUTES } from '@/constants';
 import { employerService } from '@/services';
 import { sanitizeMediaUrl } from '@/config/env';
 import { toast } from '@/context';
+import { showConfirmDialog } from '@/utils';
+
 import {
   companySizeOptions,
   companyTypeOptions,
@@ -148,7 +150,15 @@ export function CompanySettingsContent({ user, settings }) {
   };
 
   const handleRemoveLogo = async () => {
-    if (!window.confirm('Are you sure you want to remove the company logo?')) return;
+    const confirmed = await showConfirmDialog({
+      title: 'Remove Company Logo?',
+      text: 'Are you sure you want to remove your company logo? You can upload a new one at any time.',
+      confirmButtonText: 'Yes, Remove Logo',
+      icon: 'warning',
+      isDanger: true,
+    });
+    if (!confirmed) return;
+
     setLogoLoading(true);
     try {
       const response = await employerService.removeLogo();

@@ -21,7 +21,8 @@ import { ROUTES } from '@/constants';
 import { employerService } from '@/services';
 import { LoadingSpinner } from '@/components';
 import { useToast } from '@/context';
-import { formatDate } from '@/utils';
+import { formatDate, showConfirmDialog } from '@/utils';
+
 
 
 const statusFilterOptions = ['All Status', 'Active', 'Draft', 'Closed'];
@@ -174,7 +175,15 @@ export function ManageJobsContent() {
   };
 
   const handleClose = async (id) => {
-    if (!window.confirm('Are you sure you want to close this job posting?')) return;
+    const confirmed = await showConfirmDialog({
+      title: 'Close Job Posting?',
+      text: 'Are you sure you want to close this job posting? Candidates will no longer be able to apply.',
+      confirmButtonText: 'Yes, Close Job',
+      icon: 'warning',
+      isDanger: true,
+    });
+    if (!confirmed) return;
+
     setProcessingJobId(id);
     try {
       const response = await employerService.closeJob(id);
@@ -205,7 +214,15 @@ export function ManageJobsContent() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this job posting?')) return;
+    const confirmed = await showConfirmDialog({
+      title: 'Delete Job Posting?',
+      text: 'Are you sure you want to delete this job posting? This action cannot be undone.',
+      confirmButtonText: 'Yes, Delete',
+      icon: 'error',
+      isDanger: true,
+    });
+    if (!confirmed) return;
+
     setProcessingJobId(id);
     try {
       const response = await employerService.deleteJob(id);
@@ -222,12 +239,20 @@ export function ManageJobsContent() {
   };
 
   const handleBulkAction = async (action) => {
-    if (!window.confirm(`Perform bulk ${action} action on ${selectedIds.length} jobs?`)) return;
+    const confirmed = await showConfirmDialog({
+      title: 'Confirm Bulk Action',
+      text: `Are you sure you want to perform "${action}" on ${selectedIds.length} selected jobs?`,
+      confirmButtonText: `Yes, ${action}`,
+      icon: action === 'delete' ? 'error' : 'question',
+      isDanger: action === 'delete',
+    });
+    if (!confirmed) return;
+
     setBulkProcessing(true);
     try {
       const response = await employerService.bulkJobsAction(selectedIds, action);
       if (response.success) {
-        toast.success('Bulk action executed successfully!');
+        toast.success(`Bulk ${action} executed successfully!`);
         setSelectedIds([]);
         fetchJobs();
       }
