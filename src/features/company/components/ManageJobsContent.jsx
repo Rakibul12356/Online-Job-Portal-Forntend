@@ -99,7 +99,7 @@ export function ManageJobsContent() {
   const [error, setError] = useState(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [processingJobId, setProcessingJobId] = useState(null);
+  const [processingAction, setProcessingAction] = useState({ id: null, type: null });
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
   const fetchJobs = async (showLoading = true) => {
@@ -177,24 +177,24 @@ export function ManageJobsContent() {
   }
 
   const handlePublish = async (id) => {
-    setProcessingJobId(id);
+    setProcessingAction({ id, type: 'publish' });
     setJobs((curr) =>
       curr.map((val) => ((val.id || val._id) === id ? { ...val, status: 'active' } : val))
     );
     try {
       const response = await employerService.publishJob(id);
-      if (response.success) {
-        toast.success('Job published successfully!');
+      if (response && response.success !== false) {
+        toast.success(response.message || 'Job published successfully!');
         fetchJobs(false);
       } else {
-        toast.error(response.message || 'Failed to publish job');
+        toast.error(response?.message || 'Failed to publish job');
         fetchJobs(false);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to publish job');
       fetchJobs(false);
     } finally {
-      setProcessingJobId(null);
+      setProcessingAction({ id: null, type: null });
     }
   };
 
@@ -208,46 +208,46 @@ export function ManageJobsContent() {
     });
     if (!confirmed) return;
 
-    setProcessingJobId(id);
+    setProcessingAction({ id, type: 'close' });
     setJobs((curr) =>
       curr.map((val) => ((val.id || val._id) === id ? { ...val, status: 'closed' } : val))
     );
     try {
       const response = await employerService.closeJob(id);
-      if (response.success) {
-        toast.success('Job closed successfully!');
+      if (response && response.success !== false) {
+        toast.success(response.message || 'Job closed successfully!');
         fetchJobs(false);
       } else {
-        toast.error(response.message || 'Failed to close job');
+        toast.error(response?.message || 'Failed to close job');
         fetchJobs(false);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to close job');
       fetchJobs(false);
     } finally {
-      setProcessingJobId(null);
+      setProcessingAction({ id: null, type: null });
     }
   };
 
   const handleReactivate = async (id) => {
-    setProcessingJobId(id);
+    setProcessingAction({ id, type: 'reactivate' });
     setJobs((curr) =>
       curr.map((val) => ((val.id || val._id) === id ? { ...val, status: 'active' } : val))
     );
     try {
       const response = await employerService.reactivateJob(id);
-      if (response.success) {
-        toast.success('Job reactivated successfully!');
+      if (response && response.success !== false) {
+        toast.success(response.message || 'Job reactivated successfully!');
         fetchJobs(false);
       } else {
-        toast.error(response.message || 'Failed to reactivate job');
+        toast.error(response?.message || 'Failed to reactivate job');
         fetchJobs(false);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to reactivate job');
       fetchJobs(false);
     } finally {
-      setProcessingJobId(null);
+      setProcessingAction({ id: null, type: null });
     }
   };
 
@@ -261,7 +261,7 @@ export function ManageJobsContent() {
     });
     if (!confirmed) return;
 
-    setProcessingJobId(id);
+    setProcessingAction({ id, type: 'delete' });
     // Instantly remove from local state
     setJobs((curr) => curr.filter((val) => (val.id || val._id) !== id));
     setTotal((curr) => Math.max(0, curr - 1));
@@ -269,18 +269,18 @@ export function ManageJobsContent() {
 
     try {
       const response = await employerService.deleteJob(id);
-      if (response.success) {
-        toast.success('Job deleted successfully!');
+      if (response && response.success !== false) {
+        toast.success(response.message || 'Job deleted successfully!');
         fetchJobs(false);
       } else {
-        toast.error(response.message || 'Failed to delete job');
+        toast.error(response?.message || 'Failed to delete job');
         fetchJobs(false);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to delete job');
       fetchJobs(false);
     } finally {
-      setProcessingJobId(null);
+      setProcessingAction({ id: null, type: null });
     }
   };
 
@@ -309,12 +309,12 @@ export function ManageJobsContent() {
 
     try {
       const response = await employerService.bulkJobsAction(selectedIds, action);
-      if (response.success) {
-        toast.success(`Bulk ${action} executed successfully!`);
+      if (response && response.success !== false) {
+        toast.success(response.message || `Bulk ${action} executed successfully!`);
         setSelectedIds([]);
         fetchJobs(false);
       } else {
-        toast.error(response.message || 'Bulk action failed');
+        toast.error(response?.message || 'Bulk action failed');
         fetchJobs(false);
       }
     } catch (err) {
@@ -508,11 +508,11 @@ export function ManageJobsContent() {
                             <button
                               type="button"
                               onClick={() => handlePublish(job.id)}
-                              disabled={processingJobId !== null || bulkProcessing}
+                              disabled={processingAction.id !== null || bulkProcessing}
                               title="Publish"
                               className="rounded p-2 text-green-600 hover:bg-green-50 disabled:opacity-50"
                             >
-                              {processingJobId === job.id ? (
+                              {processingAction.id === job.id && processingAction.type === 'publish' ? (
                                 <span className="h-4 w-4 block animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
                               ) : (
                                 <CheckCircle className="h-4 w-4" />
@@ -523,11 +523,11 @@ export function ManageJobsContent() {
                             <button
                               type="button"
                               onClick={() => handleClose(job.id)}
-                              disabled={processingJobId !== null || bulkProcessing}
+                              disabled={processingAction.id !== null || bulkProcessing}
                               title="Close Job"
                               className="rounded p-2 text-amber-600 hover:bg-amber-50 disabled:opacity-50"
                             >
-                              {processingJobId === job.id ? (
+                              {processingAction.id === job.id && processingAction.type === 'close' ? (
                                 <span className="h-4 w-4 block animate-spin rounded-full border-2 border-amber-600 border-t-transparent" />
                               ) : (
                                 <XCircle className="h-4 w-4" />
@@ -538,11 +538,11 @@ export function ManageJobsContent() {
                             <button
                               type="button"
                               onClick={() => handleReactivate(job.id)}
-                              disabled={processingJobId !== null || bulkProcessing}
+                              disabled={processingAction.id !== null || bulkProcessing}
                               title="Reactivate"
                               className="rounded p-2 text-green-600 hover:bg-green-50 disabled:opacity-50"
                             >
-                              {processingJobId === job.id ? (
+                              {processingAction.id === job.id && processingAction.type === 'reactivate' ? (
                                 <span className="h-4 w-4 block animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
                               ) : (
                                 <PlayCircle className="h-4 w-4" />
@@ -552,11 +552,11 @@ export function ManageJobsContent() {
                           <button
                             type="button"
                             onClick={() => handleDelete(job.id)}
-                            disabled={processingJobId !== null || bulkProcessing}
+                            disabled={processingAction.id !== null || bulkProcessing}
                             title="Delete"
                             className="rounded p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
                           >
-                            {processingJobId === job.id ? (
+                            {processingAction.id === job.id && processingAction.type === 'delete' ? (
                               <span className="h-4 w-4 block animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
                             ) : (
                               <Trash2 className="h-4 w-4" />
@@ -582,7 +582,7 @@ export function ManageJobsContent() {
                 <button
                   type="button"
                   onClick={() => handleBulkAction('deactivate')}
-                  disabled={bulkProcessing || processingJobId !== null}
+                  disabled={bulkProcessing || processingAction.id !== null}
                   className="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium hover:bg-gray-50 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {bulkProcessing ? (
@@ -595,7 +595,7 @@ export function ManageJobsContent() {
                 <button
                   type="button"
                   onClick={() => handleBulkAction('activate')}
-                  disabled={bulkProcessing || processingJobId !== null}
+                  disabled={bulkProcessing || processingAction.id !== null}
                   className="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium hover:bg-gray-50 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {bulkProcessing ? (
@@ -608,7 +608,7 @@ export function ManageJobsContent() {
                 <button
                   type="button"
                   onClick={() => handleBulkAction('delete')}
-                  disabled={bulkProcessing || processingJobId !== null}
+                  disabled={bulkProcessing || processingAction.id !== null}
                   className="flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {bulkProcessing ? (

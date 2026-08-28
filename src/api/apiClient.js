@@ -135,11 +135,17 @@ async function request(path, options = {}) {
     const contentType = response.headers.get('content-type');
     let responseData = null;
 
-    if (contentType && contentType.includes('application/json')) {
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      responseData = { success: true, message: 'Operation completed successfully' };
+    } else if (contentType && contentType.includes('application/json')) {
       responseData = await response.json();
     } else {
-      // For file download streams or other media formats
-      responseData = await response.blob();
+      const text = await response.text();
+      try {
+        responseData = JSON.parse(text);
+      } catch {
+        responseData = { success: response.ok, message: text };
+      }
     }
 
     if (!response.ok) {
@@ -152,7 +158,11 @@ async function request(path, options = {}) {
       throw errorObj;
     }
 
-    // Return the response data (envelope structure is handled by the calling service)
+    // If HTTP status is 2xx, ensure success is true if not explicitly false
+    if (responseData && typeof responseData === 'object' && responseData.success === undefined) {
+      responseData.success = true;
+    }
+
     return responseData;
   } catch (error) {
     if (error.message && !error.code) {

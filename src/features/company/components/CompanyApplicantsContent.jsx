@@ -54,8 +54,9 @@ export function CompanyApplicantsContent() {
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [updatingAppId, setUpdatingAppId] = useState(null);
+  const [updatingAction, setUpdatingAction] = useState({ id: null, status: null });
   const [chatLoadingId, setChatLoadingId] = useState(null);
+
 
   const handleChatWithCandidate = async (applicant) => {
     const jobId = applicant.jobId || (applicant.job && applicant.job.id) || '1';
@@ -141,17 +142,26 @@ export function CompanyApplicantsContent() {
     });
     if (!confirmed) return;
 
-    setUpdatingAppId(appId);
+    setUpdatingAction({ id: appId, status: statusVal });
+    // Optimistically update candidate status in local state
+    setApplicants((curr) =>
+      curr.map((item) => (item.id === appId ? { ...item, status: statusVal } : item))
+    );
+
     try {
       const response = await employerService.updateApplicantStatus(appId, statusVal);
       if (response.success) {
         toast.success(`Candidate marked as ${statusVal}!`);
         fetchApplicants();
+      } else {
+        toast.error(response.message || 'Failed to update applicant status');
+        fetchApplicants();
       }
     } catch (err) {
       toast.error(err.message || 'Failed to update applicant status');
+      fetchApplicants();
     } finally {
-      setUpdatingAppId(null);
+      setUpdatingAction({ id: null, status: null });
     }
   };
 
@@ -359,11 +369,11 @@ export function CompanyApplicantsContent() {
                             <>
                               <button
                                 type="button"
-                                disabled={updatingAppId !== null}
+                                disabled={updatingAction.id !== null}
                                 onClick={() => handleUpdateStatus(applicant.id, 'shortlisted')}
                                 className="flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
                               >
-                                {updatingAppId === applicant.id ? (
+                                {updatingAction.id === applicant.id && updatingAction.status === 'shortlisted' ? (
                                   <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
                                 ) : (
                                   <UserCheck className="mr-2 h-3 w-3" />
@@ -372,11 +382,11 @@ export function CompanyApplicantsContent() {
                               </button>
                               <button
                                 type="button"
-                                disabled={updatingAppId !== null}
+                                disabled={updatingAction.id !== null}
                                 onClick={() => handleUpdateStatus(applicant.id, 'interviewed')}
                                 className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium hover:bg-gray-50 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                {updatingAppId === applicant.id ? (
+                                {updatingAction.id === applicant.id && updatingAction.status === 'interviewed' ? (
                                   <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-slate-900 border-t-transparent" />
                                 ) : (
                                   <Calendar className="mr-2 h-3 w-3" />
@@ -388,11 +398,11 @@ export function CompanyApplicantsContent() {
                           {status === 'shortlisted' && (
                             <button
                               type="button"
-                              disabled={updatingAppId !== null}
+                              disabled={updatingAction.id !== null}
                               onClick={() => handleUpdateStatus(applicant.id, 'interviewed')}
                               className="flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
                             >
-                              {updatingAppId === applicant.id ? (
+                              {updatingAction.id === applicant.id && updatingAction.status === 'interviewed' ? (
                                 <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
                               ) : (
                                 <Calendar className="mr-2 h-3 w-3" />
@@ -403,11 +413,11 @@ export function CompanyApplicantsContent() {
                           {status !== 'rejected' && status !== 'withdrawn' && (
                             <button
                               type="button"
-                              disabled={updatingAppId !== null}
+                              disabled={updatingAction.id !== null}
                               onClick={() => handleUpdateStatus(applicant.id, 'rejected')}
                               className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {updatingAppId === applicant.id ? (
+                              {updatingAction.id === applicant.id && updatingAction.status === 'rejected' ? (
                                 <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-red-600 border-t-transparent" />
                               ) : (
                                 <XCircle className="mr-2 h-3 w-3" />
