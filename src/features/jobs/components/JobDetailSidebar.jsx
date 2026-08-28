@@ -8,7 +8,7 @@ import {
   Send,
   Share2,
   Users,
-  Building2,
+Briefcase,
   MessageSquare,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -21,7 +21,7 @@ import { checkCanApplyJob, formatTimeAgo } from '@/utils';
 
 
 export function JobDetailSidebar({ job, onApply }) {
-  const Icon = job.icon || Building2;
+  const Icon = job.icon || Briefcase;
   const companyInfo = job.companyInfo || {};
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
@@ -105,16 +105,8 @@ export function JobDetailSidebar({ job, onApply }) {
         <h3 className="mb-4 text-lg font-semibold">About Company</h3>
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 border border-gray-200">
-              {companyInfo.logoUrl || job.logoUrl ? (
-                <img
-                  src={sanitizeMediaUrl(companyInfo.logoUrl || job.logoUrl)}
-                  alt={job.company || 'Company'}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <Icon className="h-8 w-8 text-slate-900" />
-              )}
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+              <Icon className="h-8 w-8 text-slate-900" />
             </div>
             <div>
               <h4 className="font-semibold">{companyInfo.companyName || job.company || 'Company'}</h4>

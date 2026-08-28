@@ -1,23 +1,17 @@
 import { Link } from 'react-router-dom';
 import { Clock, MapPin, Users, Briefcase } from 'lucide-react';
 import { ROUTES } from '@/constants';
-import { sanitizeMediaUrl } from '@/config/env';
 import { formatTimeAgo } from '@/utils';
 
 export function JobCard({ job, onApply }) {
   const Icon = job.icon || Briefcase;
-  const logo = job.logoUrl || job.companyInfo?.logoUrl;
 
   return (
     <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex flex-col gap-4 md:flex-row">
         <div className="shrink-0">
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg bg-gray-100 border border-gray-200">
-            {logo ? (
-              <img src={sanitizeMediaUrl(logo)} alt={job.company} className="h-full w-full object-cover" />
-            ) : (
-              <Icon className="h-8 w-8 text-slate-900" />
-            )}
+          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-100">
+            <Icon className="h-8 w-8 text-slate-900" />
           </div>
         </div>
 
