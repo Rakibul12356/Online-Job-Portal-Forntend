@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ApplyJobDialog,
@@ -14,10 +14,12 @@ import { jobsService } from '@/services';
 import { ROUTES } from '@/constants';
 import { LoadingSpinner } from '@/components';
 import { useAuth } from '@/context';
-import { checkCanApplyJob } from '@/utils';
+import { animateJobDetailPage, checkCanApplyJob } from '@/utils';
 
 export function JobDetailPage() {
+  const detailRef = useRef(null);
   const { jobId } = useParams();
+
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [job, setJob] = useState(null);
@@ -68,6 +70,13 @@ export function JobDetailPage() {
     }
   }, [jobId]);
 
+  useEffect(() => {
+    if (!loading && job) {
+      const revert = animateJobDetailPage(detailRef.current);
+      return () => revert?.();
+    }
+  }, [job, loading]);
+
   if (loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
@@ -94,7 +103,7 @@ export function JobDetailPage() {
   }
 
   return (
-    <>
+    <div ref={detailRef}>
       <JobBreadcrumb job={job} />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -116,7 +125,7 @@ export function JobDetailPage() {
         job={applyJob}
         onClose={() => setApplyJob(null)}
       />
-    </>
+    </div>
   );
 }
 

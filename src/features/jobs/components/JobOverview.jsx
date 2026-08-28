@@ -52,7 +52,7 @@ const overviewItems = [
 
 export function JobOverview({ job }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="job-overview-card rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <h2 className="mb-4 text-xl font-semibold">Job Overview</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {overviewItems.map(({ key, label, icon: Icon, getValue }) => (

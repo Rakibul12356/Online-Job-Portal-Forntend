@@ -44,8 +44,8 @@ export function JobSearchSection({
   }
 
   return (
-    <section className="mb-8">
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <section className="search-section-box mb-8">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="space-y-4">
           <div className="flex flex-col gap-4 md:flex-row">
             <div className="flex-1 rounded-md ring ring-transparent transition-all focus-within:ring-slate-900">

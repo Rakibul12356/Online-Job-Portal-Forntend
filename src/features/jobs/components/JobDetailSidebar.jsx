@@ -53,8 +53,8 @@ export function JobDetailSidebar({ job, onApply }) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+    <div className="job-detail-sidebar space-y-6">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24">
         <div className="space-y-4">
           <div className="border-b border-gray-200 pb-4 text-center">
             <p className="mb-1 text-2xl font-bold text-slate-900">{job.salary}</p>

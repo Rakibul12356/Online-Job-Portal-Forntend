@@ -1,6 +1,6 @@
 export function JobSkillsSection({ skills }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="job-skills-card rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <h2 className="mb-4 text-xl font-semibold">Required Skills</h2>
       <div className="flex flex-wrap gap-2">
         {skills.map((skill) => (

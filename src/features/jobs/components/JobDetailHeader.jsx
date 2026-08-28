@@ -7,7 +7,7 @@ export function JobDetailHeader({ job }) {
   const Icon = job.icon || Briefcase;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="job-detail-header-card rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="flex items-start gap-4">
         <div className="shrink-0">
           <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gray-100">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ApplyJobDialog,
@@ -10,13 +10,15 @@ import {
 import { jobsService } from '@/services';
 import { LoadingSpinner } from '@/components';
 import { useAuth } from '@/context';
-import { checkCanApplyJob } from '@/utils';
+import { animateHero, animateStaggerCards, checkCanApplyJob } from '@/utils';
 
 export function HomePage() {
+  const containerRef = useRef(null);
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [applyJob, setApplyJob] = useState(null);
   const [jobs, setJobs] = useState([]);
+
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -102,6 +104,17 @@ export function HomePage() {
     fetchJobs(searchQuery, filters);
   }, [searchQuery, filters, fetchJobs]);
 
+  useEffect(() => {
+    const revert = animateHero(containerRef.current);
+    return () => revert?.();
+  }, []);
+
+  useEffect(() => {
+    if (!loading && jobs.length > 0) {
+      animateStaggerCards('.job-card-item');
+    }
+  }, [jobs, loading]);
+
   function handleSearch(query, updatedFilters) {
     setSearchQuery(query);
     setFilters(updatedFilters);
@@ -114,7 +127,7 @@ export function HomePage() {
   };
 
   return (
-    <>
+    <div ref={containerRef}>
       <HeroSection />
       <JobSearchSection
         searchQuery={searchQuery}
@@ -152,7 +165,7 @@ export function HomePage() {
         job={applyJob}
         onClose={() => setApplyJob(null)}
       />
-    </>
+    </div>
   );
 }
 

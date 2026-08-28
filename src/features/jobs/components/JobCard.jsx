@@ -7,7 +7,7 @@ export function JobCard({ job, onApply }) {
   const Icon = job.icon || Briefcase;
 
   return (
-    <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+    <article className="job-card-item rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 hover:border-gray-300">
       <div className="flex flex-col gap-4 md:flex-row">
         <div className="shrink-0">
           <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-100">
