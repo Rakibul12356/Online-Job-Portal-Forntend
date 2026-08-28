@@ -1,17 +1,23 @@
 import { Link } from 'react-router-dom';
 import { Bookmark, Clock, MapPin, Briefcase } from 'lucide-react';
 import { ROUTES } from '@/constants';
+import { sanitizeMediaUrl } from '@/config/env';
 import { formatTimeAgo } from '@/utils';
 
 export function JobDetailHeader({ job }) {
   const Icon = job.icon || Briefcase;
+  const logo = job.logoUrl || job.companyInfo?.logoUrl;
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
       <div className="flex items-start gap-4">
         <div className="shrink-0">
-          <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gray-100">
-            <Icon className="h-10 w-10 text-slate-900" />
+          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg bg-gray-100 border border-gray-200">
+            {logo ? (
+              <img src={sanitizeMediaUrl(logo)} alt={job.company} className="h-full w-full object-cover" />
+            ) : (
+              <Icon className="h-10 w-10 text-slate-900" />
+            )}
           </div>
         </div>
         <div className="min-w-0 flex-1">

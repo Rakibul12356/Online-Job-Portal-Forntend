@@ -15,7 +15,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants';
 import { useAuth } from '@/context';
 import { chatService } from '@/services';
-import { checkCanApplyJob } from '@/utils';
+import { sanitizeMediaUrl } from '@/config/env';
+import { checkCanApplyJob, formatTimeAgo } from '@/utils';
+
+
 
 export function JobDetailSidebar({ job, onApply }) {
   const Icon = job.icon || Building2;
@@ -102,36 +105,78 @@ export function JobDetailSidebar({ job, onApply }) {
         <h3 className="mb-4 text-lg font-semibold">About Company</h3>
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-gray-100">
-              <Icon className="h-8 w-8 text-slate-900" />
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 border border-gray-200">
+              {companyInfo.logoUrl || job.logoUrl ? (
+                <img
+                  src={sanitizeMediaUrl(companyInfo.logoUrl || job.logoUrl)}
+                  alt={job.company || 'Company'}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Icon className="h-8 w-8 text-slate-900" />
+              )}
             </div>
             <div>
-              <h4 className="font-semibold">{job.company}</h4>
-              <p className="text-sm text-gray-500">{companyInfo.industry}</p>
+              <h4 className="font-semibold">{companyInfo.companyName || job.company || 'Company'}</h4>
+              {(companyInfo.industry || job.industry || job.category) && (
+                <p className="text-sm text-gray-500">
+                  {companyInfo.industry || job.industry || job.category}
+                </p>
+              )}
             </div>
           </div>
 
-          <p className="text-sm text-gray-500">{companyInfo.about}</p>
+          {(companyInfo.about || companyInfo.description || job.companyAbout || job.companyDescription) && (
+            <p className="text-sm text-gray-500">
+              {companyInfo.about || companyInfo.description || job.companyAbout || job.companyDescription}
+            </p>
+          )}
 
           <div className="space-y-2 pt-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Globe className="h-4 w-4 text-gray-500" />
-              <a href="#" className="text-slate-900 hover:underline">
-                {companyInfo.website}
-              </a>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-500">{companyInfo.location}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Users className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-500">{companyInfo.employees}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Calendar className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-500">{companyInfo.founded}</span>
-            </div>
+            {(companyInfo.website || job.companyWebsite || job.website) && (
+              <div className="flex items-center gap-2 text-sm">
+                <Globe className="h-4 w-4 text-gray-500" />
+                <a
+                  href={
+                    (companyInfo.website || job.companyWebsite || job.website).startsWith('http')
+                      ? companyInfo.website || job.companyWebsite || job.website
+                      : `https://${companyInfo.website || job.companyWebsite || job.website}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-slate-900 hover:underline"
+                >
+                  {companyInfo.website || job.companyWebsite || job.website}
+                </a>
+              </div>
+            )}
+
+            {(companyInfo.location || job.locationDetail || job.location) && (
+              <div className="flex items-center gap-2 text-sm">
+                <MapPin className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-500">
+                  {companyInfo.location || job.locationDetail || job.location}
+                </span>
+              </div>
+            )}
+
+            {(companyInfo.employees || companyInfo.size || job.companySize) && (
+              <div className="flex items-center gap-2 text-sm">
+                <Users className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-500">
+                  {companyInfo.employees || companyInfo.size || job.companySize}
+                </span>
+              </div>
+            )}
+
+            {(companyInfo.founded || companyInfo.foundedYear || job.foundedYear) && (
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-500">
+                  {companyInfo.founded || companyInfo.foundedYear || job.foundedYear}
+                </span>
+              </div>
+            )}
           </div>
 
           <Link
