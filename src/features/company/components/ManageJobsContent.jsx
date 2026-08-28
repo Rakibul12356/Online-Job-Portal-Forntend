@@ -102,8 +102,10 @@ export function ManageJobsContent() {
   const [processingJobId, setProcessingJobId] = useState(null);
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  const fetchJobs = async () => {
-    setLoading(true);
+  const fetchJobs = async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const params = {
@@ -113,7 +115,7 @@ export function ManageJobsContent() {
       };
 
       if (searchQuery.trim()) {
-        params.q = searchQuery;
+        params.q = searchQuery.trim();
       }
 
       if (statusFilter !== 'All Status') {
@@ -122,8 +124,21 @@ export function ManageJobsContent() {
 
       const response = await employerService.getOwnedJobs(params);
       if (response.success && response.data) {
-        setJobs(response.data.items || []);
-        setTotal(response.data.pagination?.total || response.data.items?.length || 0);
+        const rawItems = Array.isArray(response.data)
+          ? response.data
+          : response.data.items || response.data.jobs || response.data.data || [];
+
+        const normalized = rawItems.map((job) => ({
+          ...job,
+          id: job.id || job._id,
+        }));
+
+        setJobs(normalized);
+        setTotal(
+          response.data.pagination?.total ??
+          response.data.total ??
+          normalized.length
+        );
       } else {
         setError('Failed to fetch jobs listing');
       }
@@ -131,12 +146,14 @@ export function ManageJobsContent() {
       console.error(err);
       setError(err.message || 'Error occurred while loading jobs');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchJobs();
+    fetchJobs(true);
   }, [searchQuery, statusFilter, sortBy, page]);
 
   const allSelected = jobs.length > 0 && selectedIds.length === jobs.length;
@@ -149,7 +166,7 @@ export function ManageJobsContent() {
     if (allSelected) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(jobs.map((job) => job.id));
+      setSelectedIds(jobs.map((job) => job.id || job._id));
     }
   }
 
@@ -161,14 +178,21 @@ export function ManageJobsContent() {
 
   const handlePublish = async (id) => {
     setProcessingJobId(id);
+    setJobs((curr) =>
+      curr.map((val) => ((val.id || val._id) === id ? { ...val, status: 'active' } : val))
+    );
     try {
       const response = await employerService.publishJob(id);
       if (response.success) {
         toast.success('Job published successfully!');
-        fetchJobs();
+        fetchJobs(false);
+      } else {
+        toast.error(response.message || 'Failed to publish job');
+        fetchJobs(false);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to publish job');
+      fetchJobs(false);
     } finally {
       setProcessingJobId(null);
     }
@@ -185,14 +209,21 @@ export function ManageJobsContent() {
     if (!confirmed) return;
 
     setProcessingJobId(id);
+    setJobs((curr) =>
+      curr.map((val) => ((val.id || val._id) === id ? { ...val, status: 'closed' } : val))
+    );
     try {
       const response = await employerService.closeJob(id);
       if (response.success) {
         toast.success('Job closed successfully!');
-        fetchJobs();
+        fetchJobs(false);
+      } else {
+        toast.error(response.message || 'Failed to close job');
+        fetchJobs(false);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to close job');
+      fetchJobs(false);
     } finally {
       setProcessingJobId(null);
     }
@@ -200,14 +231,21 @@ export function ManageJobsContent() {
 
   const handleReactivate = async (id) => {
     setProcessingJobId(id);
+    setJobs((curr) =>
+      curr.map((val) => ((val.id || val._id) === id ? { ...val, status: 'active' } : val))
+    );
     try {
       const response = await employerService.reactivateJob(id);
       if (response.success) {
         toast.success('Job reactivated successfully!');
-        fetchJobs();
+        fetchJobs(false);
+      } else {
+        toast.error(response.message || 'Failed to reactivate job');
+        fetchJobs(false);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to reactivate job');
+      fetchJobs(false);
     } finally {
       setProcessingJobId(null);
     }
@@ -224,15 +262,23 @@ export function ManageJobsContent() {
     if (!confirmed) return;
 
     setProcessingJobId(id);
+    // Instantly remove from local state
+    setJobs((curr) => curr.filter((val) => (val.id || val._id) !== id));
+    setTotal((curr) => Math.max(0, curr - 1));
+    setSelectedIds((curr) => curr.filter((val) => val !== id));
+
     try {
       const response = await employerService.deleteJob(id);
       if (response.success) {
         toast.success('Job deleted successfully!');
-        setSelectedIds((curr) => curr.filter((val) => val !== id));
-        fetchJobs();
+        fetchJobs(false);
+      } else {
+        toast.error(response.message || 'Failed to delete job');
+        fetchJobs(false);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to delete job');
+      fetchJobs(false);
     } finally {
       setProcessingJobId(null);
     }
@@ -249,15 +295,31 @@ export function ManageJobsContent() {
     if (!confirmed) return;
 
     setBulkProcessing(true);
+    if (action === 'delete') {
+      setJobs((curr) => curr.filter((val) => !selectedIds.includes(val.id || val._id)));
+      setTotal((curr) => Math.max(0, curr - selectedIds.length));
+    } else if (action === 'close' || action === 'reactivate') {
+      const newStatus = action === 'close' ? 'closed' : 'active';
+      setJobs((curr) =>
+        curr.map((val) =>
+          selectedIds.includes(val.id || val._id) ? { ...val, status: newStatus } : val
+        )
+      );
+    }
+
     try {
       const response = await employerService.bulkJobsAction(selectedIds, action);
       if (response.success) {
         toast.success(`Bulk ${action} executed successfully!`);
         setSelectedIds([]);
-        fetchJobs();
+        fetchJobs(false);
+      } else {
+        toast.error(response.message || 'Bulk action failed');
+        fetchJobs(false);
       }
     } catch (err) {
       toast.error(err.message || 'Bulk action failed');
+      fetchJobs(false);
     } finally {
       setBulkProcessing(false);
     }
