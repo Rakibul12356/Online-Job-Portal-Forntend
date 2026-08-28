@@ -16,6 +16,8 @@ import {
 import { ROUTES } from '@/constants';
 import { seekerService } from '@/services';
 import { LoadingSpinner } from '@/components';
+import { formatDate } from '@/utils';
+
 
 const statusBadgeStyles = {
   pending: 'bg-amber-100 text-amber-800 border border-amber-200',
@@ -158,7 +160,7 @@ export function DashboardContent({ firstName = 'User' }) {
                           <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              Applied on {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : ''}
+                              Applied on {app.appliedAt ? formatDate(app.appliedAt) : ''}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">

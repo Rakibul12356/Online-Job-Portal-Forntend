@@ -24,6 +24,7 @@ import { employerService } from '@/services';
 import { LoadingSpinner } from '@/components';
 import { sanitizeMediaUrl } from '@/config/env';
 import { useToast } from '@/context';
+import { formatDate, formatTimeAgo } from '@/utils';
 
 export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
   const navigate = useNavigate();
@@ -173,7 +174,7 @@ export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
                           )}
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {job.postedLabel || 'Recently'}
+                            {formatTimeAgo(job.postedLabel || job.postedAt || job.createdAt || 'Recently')}
                           </span>
                         </div>
                       </div>
@@ -245,7 +246,7 @@ export function CompanyDashboardContent({ firstName = 'TechCorp' }) {
                             </p>
                           </div>
                           <span className="shrink-0 text-xs text-gray-500">
-                            {applicant.appliedAt ? new Date(applicant.appliedAt).toLocaleDateString() : ''}
+                            {applicant.appliedAt ? formatTimeAgo(applicant.appliedAt) : ''}
                           </span>
                         </div>
                         {applicant.seekerSkills && applicant.seekerSkills.length > 0 && (

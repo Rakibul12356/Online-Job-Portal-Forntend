@@ -90,7 +90,9 @@ export function JobDetailSidebar({ job, onApply }) {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500">Posted</span>
-              <span className="font-medium">{job.postedLabel}</span>
+              <span className="font-medium">
+                {formatTimeAgo(job.postedLabel || job.postedAt || job.createdAt || job.posted)}
+              </span>
             </div>
           </div>
         </div>

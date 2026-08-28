@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { useAuth } from '@/context';
-import { checkCanApplyJob } from '@/utils';
+import { checkCanApplyJob, formatTimeAgo } from '@/utils';
 import { ApplyJobDialog } from '@/features/jobs/components';
 import { companyProfileData } from '../data/mockCompanyProfile';
 
@@ -161,7 +161,7 @@ export function CompanyProfileContent({ user }) {
                         <span>•</span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {job.posted}
+                          {formatTimeAgo(job.posted || job.postedAt || job.createdAt)}
                         </span>
                         <span>•</span>
                         <span className="flex items-center gap-1">

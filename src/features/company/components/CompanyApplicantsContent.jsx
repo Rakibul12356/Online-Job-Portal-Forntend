@@ -16,6 +16,8 @@ import { employerService, chatService } from '@/services';
 import { LoadingSpinner } from '@/components';
 import { sanitizeMediaUrl } from '@/config/env';
 import { useToast } from '@/context';
+import { formatDate } from '@/utils';
+
 import {
   dateFilterOptions,
   defaultDateFilter,
@@ -259,7 +261,7 @@ export function CompanyApplicantsContent() {
                 const email = applicant.seekerEmail || applicant.email || '';
                 const skillsList = applicant.seekerSkills || applicant.skills || [];
                 const experience = applicant.seekerExperience || applicant.experience || 'N/A';
-                const dateApplied = applicant.appliedAt ? new Date(applicant.appliedAt).toLocaleDateString() : 'N/A';
+                const dateApplied = applicant.appliedAt ? formatDate(applicant.appliedAt) : 'N/A';
                 const status = applicant.status;
 
                 return (

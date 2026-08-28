@@ -6,6 +6,8 @@ import {
   MapPin,
   Users,
 } from 'lucide-react';
+import { formatDate } from '@/utils';
+
 
 const overviewItems = [
   { key: 'jobType', label: 'Job Type', icon: Briefcase, getValue: (job) => job.jobType || 'Full-time' },
@@ -38,7 +40,7 @@ const overviewItems = [
     key: 'deadline',
     label: 'Application Deadline',
     icon: Calendar,
-    getValue: (job) => job.deadline ? new Date(job.deadline).toLocaleDateString() : 'N/A',
+    getValue: (job) => (job.deadline ? formatDate(job.deadline) : 'N/A'),
   },
   {
     key: 'applicants',

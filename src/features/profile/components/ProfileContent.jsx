@@ -23,6 +23,8 @@ import { ROUTES } from '@/constants';
 import { seekerService } from '@/services';
 import { sanitizeMediaUrl } from '@/config/env';
 import { useToast } from '@/context';
+import { formatDate } from '@/utils';
+
 
 
 export function ProfileContent({ user, profile }) {
@@ -292,7 +294,7 @@ export function ProfileContent({ user, profile }) {
                         {profile.resume.filename || 'resume.pdf'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Uploaded {profile.resume.uploadedAt ? new Date(profile.resume.uploadedAt).toLocaleDateString() : 'N/A'}
+                        Uploaded {profile.resume.uploadedAt ? formatDate(profile.resume.uploadedAt) : 'N/A'}
                       </p>
                     </div>
                   </div>

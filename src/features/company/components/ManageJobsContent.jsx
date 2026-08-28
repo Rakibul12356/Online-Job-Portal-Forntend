@@ -21,6 +21,8 @@ import { ROUTES } from '@/constants';
 import { employerService } from '@/services';
 import { LoadingSpinner } from '@/components';
 import { useToast } from '@/context';
+import { formatDate } from '@/utils';
+
 
 const statusFilterOptions = ['All Status', 'Active', 'Draft', 'Closed'];
 const sortOptions = ['Newest First', 'Oldest First'];
@@ -401,10 +403,10 @@ export function ManageJobsContent() {
                         <span className="font-medium">{job.applicants ?? 0}</span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {job.postedAt ? new Date(job.postedAt).toLocaleDateString() : 'N/A'}
+                        {job.postedAt ? formatDate(job.postedAt) : 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {job.deadline ? new Date(job.deadline).toLocaleDateString() : 'N/A'}
+                        {job.deadline ? formatDate(job.deadline) : 'N/A'}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-1">

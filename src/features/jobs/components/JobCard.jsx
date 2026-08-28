@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Clock, MapPin, Users, Briefcase } from 'lucide-react';
 import { ROUTES } from '@/constants';
+import { formatTimeAgo } from '@/utils';
 
 export function JobCard({ job, onApply }) {
   const Icon = job.icon || Briefcase;
@@ -40,7 +41,7 @@ export function JobCard({ job, onApply }) {
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {job.postedAt}
+                  {formatTimeAgo(job.postedAt || job.createdAt || job.posted)}
                 </span>
               </div>
             </div>

@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { chatService } from '@/services';
+import { formatDate } from '@/utils';
+
 
 const statusBadgeStyles = {
   pending: 'bg-amber-100 text-amber-800 border border-amber-200',
@@ -53,7 +55,7 @@ export function ApplicationCard({ application, onWithdraw, isWithdrawing }) {
   const badgeStyle = statusBadgeStyles[status] || 'bg-gray-100 text-gray-800';
   const statusLabel = statusLabels[status] || status;
   const appliedOn = application.appliedAt
-    ? `Applied on ${new Date(application.appliedAt).toLocaleDateString()}`
+    ? `Applied on ${formatDate(application.appliedAt)}`
     : application.appliedOn || 'N/A';
   
   const showWithdraw = status === 'pending' || status === 'shortlisted';
