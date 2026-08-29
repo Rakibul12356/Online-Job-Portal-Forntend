@@ -78,8 +78,18 @@ export const companyApplicants = [
 
 export const statusFilterConfig = [
   { id: 'new', label: 'New Applications', count: 8, statusMatch: 'New' },
-  { id: 'shortlisted', label: 'Shortlisted', count: 8, statusMatch: 'Shortlisted' },
-  { id: 'interviewed', label: 'Interviewed', count: 5, statusMatch: 'Interviewed' },
+  {
+    id: 'shortlisted',
+    label: 'Shortlisted',
+    count: 8,
+    statusMatch: 'Shortlisted',
+  },
+  {
+    id: 'interviewed',
+    label: 'Interviewed',
+    count: 5,
+    statusMatch: 'Interviewed',
+  },
   { id: 'rejected', label: 'Rejected', count: 3, statusMatch: 'Rejected' },
 ];
 
@@ -104,16 +114,16 @@ export const statusStyles = {
 };
 
 export const defaultStatusFilters = {
-  new: true,
-  shortlisted: true,
+  new: false,
+  shortlisted: false,
   interviewed: false,
   rejected: false,
 };
 
 export const defaultExperienceFilters = {
   entry: false,
-  mid: true,
-  senior: true,
+  mid: false,
+  senior: false,
 };
 
-export const defaultDateFilter = '24h';
+export const defaultDateFilter = 'all';
