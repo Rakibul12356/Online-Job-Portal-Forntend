@@ -111,9 +111,9 @@ export async function showWarningAlert(title = 'Notice', text = '') {
 /**
  * Show SweetAlert2 dialog prompting unauthenticated users to log in
  * @param {Function} navigate - React Router navigate function
- * @param {string} [redirectPath='/signin'] - Path to redirect to on confirmation
+ * @param {string} [redirectPath='/sign-in'] - Path to redirect to on confirmation
  */
-export async function showLoginRequiredAlert(navigate, redirectPath = '/signin') {
+export async function showLoginRequiredAlert(navigate, redirectPath = '/sign-in') {
   const Swal = getSwal();
   if (!Swal) {
     const ok = window.confirm('Please log in as a Job Seeker to apply for this job. Go to login?');
