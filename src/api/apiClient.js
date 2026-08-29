@@ -98,13 +98,19 @@ async function request(path, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
+  // Setup abort controller for a 20-second request timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
   const config = {
     ...options,
     headers,
+    signal: controller.signal,
   };
 
   try {
     let response = await fetch(url, config);
+    clearTimeout(timeoutId);
 
     // If unauthorized, attempt token refresh once
     if (response.status === 401 && authData?.refreshToken) {
@@ -125,7 +131,22 @@ async function request(path, options = {}) {
       const retryRequest = new Promise((resolve) => {
         subscribeTokenRefresh((newToken) => {
           config.headers['Authorization'] = `Bearer ${newToken}`;
-          resolve(fetch(url, config));
+          // Set a new timeout for the retry request
+          const retryController = new AbortController();
+          const retryTimeoutId = setTimeout(() => retryController.abort(), 20000);
+          config.signal = retryController.signal;
+          
+          resolve(
+            fetch(url, config)
+              .then((res) => {
+                clearTimeout(retryTimeoutId);
+                return res;
+              })
+              .catch((err) => {
+                clearTimeout(retryTimeoutId);
+                throw err;
+              })
+          );
         });
       });
 
@@ -165,6 +186,14 @@ async function request(path, options = {}) {
 
     return responseData;
   } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw {
+        code: 'TIMEOUT_ERROR',
+        message: 'Request timed out. The server took too long to respond.',
+        details: null,
+      };
+    }
     if (error.message && !error.code) {
       // Convert typical connection/parsing errors to our standard error envelope format
       throw {

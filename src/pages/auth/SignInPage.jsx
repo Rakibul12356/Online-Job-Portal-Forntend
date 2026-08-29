@@ -92,9 +92,17 @@ export function SignInPage() {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium">
-              Password <span className="text-red-500">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="text-sm font-medium">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <Link
+                to={ROUTES.FORGOT_PASSWORD}
+                className="text-sm font-medium text-slate-900 hover:underline"
+              >
+                Forgot Password?
+              </Link>
+            </div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <input

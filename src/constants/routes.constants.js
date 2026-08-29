@@ -10,6 +10,7 @@ export const ROUTES = {
   SAVED_JOBS: '/saved-jobs',
   SIGN_IN: '/sign-in',
   REGISTER: '/register',
+  FORGOT_PASSWORD: '/forgot-password',
   DASHBOARD: '/dashboard',
   COMPANY_SETTINGS: '/company/settings',
   COMPANY_PROFILE: '/company/profile',
