@@ -14,6 +14,16 @@ Frontend-only React architecture for a scalable job portal application.
 - Tailwind CSS 4
 - ESLint + Prettier
 
+## Key Features
+
+- **Authentication & User Management:**
+  - Standard SignIn and Account Registration flows.
+  - **Forgot & Reset Password Flow:** A beautiful 2-step flow with loader states, 6-digit OTP validations, password strength/match check, password visibility show/hide toggles, and a 60-second OTP resend cooldown timer.
+- **API Client Enhancements:**
+  - Automated JWT token refresh handling.
+  - Built-in **20-second connection abort timeout** (`AbortController`) to handle slow mailers or SMTP server hangs.
+- **Premium Design System:** Tailwind CSS v4 utility classes combined with custom CSS animation presets (slide-in, slide-down, card-hovers).
+
 ## Getting Started
 
 ```bash
@@ -52,3 +62,4 @@ npm run dev
 Copy `.env.example` to `.env` and configure:
 
 - `VITE_APP_NAME` — Application display name
+- `VITE_API_URL` — Backend API base URL
