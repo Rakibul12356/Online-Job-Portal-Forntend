@@ -52,6 +52,42 @@ npm run dev
 
 ## Project Structure
 
+A visual guide to the folder structure and architecture of this project:
+
+```text
+job-portal/
+├── src/
+│   ├── api/                # API client configuration and Axios interceptors
+│   ├── assets/             # Static files like logos and images
+│   ├── components/         # Shared reusable UI elements (Buttons, Badges, Modals)
+│   ├── config/             # Environment configurations and runtime variables
+│   ├── constants/          # Application-wide static paths, roles, and action types
+│   ├── context/            # Authentication and global state context providers
+│   ├── features/           # Modular domain-driven features
+│   │   ├── applications/   # Seeker applications tracking and lists
+│   │   ├── companies/      # Public company listings and detail layouts
+│   │   ├── company/        # Recruiter management modules (jobs list, applicants, settings)
+│   │   ├── dashboard/      # Analytical dashboard components (seeker and employer views)
+│   │   ├── jobs/           # Job feeds, search bars, filter sidebars, and job details
+│   │   └── profile/        # Seeker profile updates, resume, and experience editors
+│   ├── hooks/              # Reusable custom React hooks (e.g., auth, notifications)
+│   ├── layouts/            # Page layouts (Navbar, Footer, Sidebar wrappers)
+│   ├── lib/                # Shared library configs and helper scripts
+│   ├── pages/              # Route-level page components (views)
+│   │   ├── auth/           # Login, registration, forgot/reset password pages
+│   │   ├── chat/           # WebSocket real-time direct messaging page
+│   │   └── ...             # Page-level route views
+│   ├── providers/          # Global application providers
+│   ├── routes/             # Client-side routing configuration and lazy routes
+│   ├── services/           # Server API service files (jobsService, chatService, etc.)
+│   ├── styles/             # Global CSS and Tailwind CSS setup
+│   └── utils/              # Utility helper functions (formatting, validation, date parsers)
+├── package.json            # Scripts, dependency list, and project configurations
+└── README.md               # Project documentation
+```
+
+### Directory Roles & Purpose
+
 | Directory         | Purpose                                         |
 | ----------------- | ----------------------------------------------- |
 | `src/features/`   | Feature modules (jobs, companies, applications) |
