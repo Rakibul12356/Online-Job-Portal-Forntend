@@ -18,6 +18,7 @@ import {
 import { chatService } from '@/services';
 import { useAuth } from '@/context';
 import { appConfig } from '@/config/env';
+import { AUTH_STORAGE_KEY } from '@/constants';
 
 const isRoomForUser = (room, userId) => {
   return (
@@ -58,6 +59,12 @@ export function ChatPage() {
   const [globalWsStatus, setGlobalWsStatus] = useState('disconnected');
 
   const currentUserId = user?.id || user?._id;
+  const currentUserIdRef = useRef(currentUserId);
+
+  // Sync currentUserId to ref
+  useEffect(() => {
+    currentUserIdRef.current = currentUserId;
+  }, [currentUserId]);
 
   // Sync activeRoomId to ref
   useEffect(() => {
@@ -89,13 +96,13 @@ export function ChatPage() {
     const connectGlobalWebSocket = () => {
       setGlobalWsStatus('connecting');
 
-      const apiBase = appConfig.apiUrl;
+      const apiBase = appConfig.apiUrl.replace(/\/+$/, '');
       const wsProtocol = apiBase.startsWith('https') ? 'wss' : 'ws';
       const baseHostPath = apiBase.replace(/^https?:\/\//, '');
 
       let token = '';
       try {
-        const raw = localStorage.getItem('job_portal_user');
+        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           token = parsed?.accessToken || '';
@@ -137,10 +144,14 @@ export function ChatPage() {
                 const msg = data.message;
                 if (!msg) return;
 
-                // Update sidebar unreadCount and lastMessage if this room is not active
-                if (msg.roomId !== activeRoomIdRef.current) {
-                  setRooms((prevRooms) =>
-                    prevRooms.map((room) => {
+                setRooms((prevRooms) => {
+                  const exists = prevRooms.some((room) => room.id === msg.roomId);
+                  if (!exists) {
+                    fetchRooms();
+                    return prevRooms;
+                  }
+                  if (msg.roomId !== activeRoomIdRef.current) {
+                    return prevRooms.map((room) => {
                       if (room.id === msg.roomId) {
                         return {
                           ...room,
@@ -150,6 +161,21 @@ export function ChatPage() {
                         };
                       }
                       return room;
+                    });
+                  }
+                  return prevRooms;
+                });
+                break;
+              }
+
+              case 'message_status': {
+                if (data.roomId === activeRoomIdRef.current) {
+                  setMessages((prev) =>
+                    prev.map((msg) => {
+                      if (String(msg.senderId) === String(currentUserIdRef.current)) {
+                        return { ...msg, status: data.status };
+                      }
+                      return msg;
                     }),
                   );
                 }
@@ -157,6 +183,9 @@ export function ChatPage() {
               }
 
               case 'user_status': {
+                if (String(data.userId) === String(currentUserIdRef.current)) {
+                  break;
+                }
                 setRooms((prevRooms) =>
                   prevRooms.map((room) => {
                     if (isRoomForUser(room, data.userId)) {
@@ -247,13 +276,13 @@ export function ChatPage() {
       setWsStatus('connecting');
 
       // Build WebSocket URL from VITE_API_URL / appConfig.apiUrl
-      const apiBase = appConfig.apiUrl;
+      const apiBase = appConfig.apiUrl.replace(/\/+$/, '');
       const wsProtocol = apiBase.startsWith('https') ? 'wss' : 'ws';
       const baseHostPath = apiBase.replace(/^https?:\/\//, '');
 
       let token = '';
       try {
-        const raw = localStorage.getItem('job_portal_user');
+        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           token = parsed?.accessToken || '';
@@ -270,19 +299,12 @@ export function ChatPage() {
 
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;
-
       socket.onopen = () => {
         console.log('WebSocket connected successfully');
         setWsStatus('connected');
         // Clear any pending reconnection attempts
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
-        }
-        // Send a seen read receipt event immediately upon connection
-        try {
-          socket.send(JSON.stringify({ type: 'seen' }));
-        } catch (e) {
-          console.error('Failed to send seen receipt on connect:', e);
         }
       };
 
@@ -314,20 +336,23 @@ export function ChatPage() {
                     return [...prev, msg];
                   });
 
-                  // Trigger a read receipt back to the server if focus is active AND the message was sent by the other user
-                  if (
-                    String(msg.senderId) !== String(currentUserId) &&
-                    document.hasFocus() &&
-                    wsRef.current &&
-                    socket.readyState === WebSocket.OPEN
-                  ) {
-                    socket.send(JSON.stringify({ type: 'seen' }));
+                  // If tab has focus, mark as seen immediately
+                  if (document.hasFocus() && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                    try {
+                      wsRef.current.send(JSON.stringify({ type: 'seen' }));
+                    } catch (err) {
+                      console.error('Failed to send immediate seen receipt:', err);
+                    }
                   }
                 }
 
-                // Update last message and unread count in rooms list
-                setRooms((prevRooms) =>
-                  prevRooms.map((room) => {
+                setRooms((prevRooms) => {
+                  const exists = prevRooms.some((room) => room.id === msg.roomId);
+                  if (!exists) {
+                    fetchRooms();
+                    return prevRooms;
+                  }
+                  return prevRooms.map((room) => {
                     if (room.id === msg.roomId) {
                       return {
                         ...room,
@@ -340,8 +365,8 @@ export function ChatPage() {
                       };
                     }
                     return room;
-                  }),
-                );
+                  });
+                });
                 break;
               }
 
@@ -349,7 +374,7 @@ export function ChatPage() {
                 if (data.roomId === activeRoomId) {
                   setMessages((prev) =>
                     prev.map((msg) => {
-                      if (String(msg.senderId) === String(currentUserId)) {
+                      if (String(msg.senderId) === String(currentUserIdRef.current)) {
                         return { ...msg, status: data.status };
                       }
                       return msg;
@@ -360,7 +385,7 @@ export function ChatPage() {
               }
 
               case 'typing': {
-                if (String(data.senderId) !== String(currentUserId)) {
+                if (String(data.senderId) !== String(currentUserIdRef.current)) {
                   setIsOtherTyping(data.isTyping || false);
                   setTypingUserName(data.senderName || '');
                 }
@@ -368,6 +393,9 @@ export function ChatPage() {
               }
 
               case 'user_status': {
+                if (String(data.userId) === String(currentUserIdRef.current)) {
+                  break;
+                }
                 setRooms((prevRooms) =>
                   prevRooms.map((room) => {
                     if (isRoomForUser(room, data.userId)) {
@@ -399,9 +427,22 @@ export function ChatPage() {
                 }
                 return [...prev, legacyMsg];
               });
+
+              if (document.hasFocus() && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                try {
+                  wsRef.current.send(JSON.stringify({ type: 'seen' }));
+                } catch (err) {
+                  console.error('Failed to send immediate legacy seen receipt:', err);
+                }
+              }
             }
-            setRooms((prevRooms) =>
-              prevRooms.map((room) => {
+            setRooms((prevRooms) => {
+              const exists = prevRooms.some((room) => room.id === legacyMsg.roomId);
+              if (!exists) {
+                fetchRooms();
+                return prevRooms;
+              }
+              return prevRooms.map((room) => {
                 if (room.id === legacyMsg.roomId) {
                   return {
                     ...room,
@@ -414,8 +455,8 @@ export function ChatPage() {
                   };
                 }
                 return room;
-              }),
-            );
+              });
+            });
           }
         } catch (err) {
           console.error('Error handling WebSocket message:', err);
@@ -475,6 +516,60 @@ export function ChatPage() {
       }
     };
   }, [activeRoomId]);
+
+  // Sync seen read receipt back to the server if there are unread messages from the other user
+  useEffect(() => {
+    const handleFocus = () => {
+      if (wsStatus === 'connected' && activeRoomId && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        const activeRoom = rooms.find((r) => r.id === activeRoomId);
+        const hasUnread =
+          (activeRoom && activeRoom.unreadCount > 0) ||
+          messages.some(
+            (msg) =>
+              String(msg.senderId) !== String(currentUserId) &&
+              msg.status !== 'seen',
+          );
+        if (hasUnread) {
+          try {
+            wsRef.current.send(JSON.stringify({ type: 'seen' }));
+          } catch (err) {
+            console.error('Failed to send seen receipt on window focus:', err);
+          }
+        }
+      }
+    };
+
+    if (wsStatus === 'connected' && activeRoomId) {
+      const activeRoom = rooms.find((r) => r.id === activeRoomId);
+      const hasUnread =
+        (activeRoom && activeRoom.unreadCount > 0) ||
+        messages.some(
+          (msg) =>
+            String(msg.senderId) !== String(currentUserId) &&
+            msg.status !== 'seen',
+        );
+
+      if (
+        hasUnread &&
+        document.hasFocus() &&
+        wsRef.current &&
+        wsRef.current.readyState === WebSocket.OPEN
+      ) {
+        try {
+          wsRef.current.send(JSON.stringify({ type: 'seen' }));
+        } catch (err) {
+          console.error('Failed to send seen receipt in effect:', err);
+        }
+      }
+    }
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [messages, rooms, wsStatus, activeRoomId, currentUserId]);
 
   const handleTyping = () => {
     if (!wsRef.current || wsStatus !== 'connected') return;
@@ -881,7 +976,19 @@ export function ChatPage() {
                     handleTyping();
                   }}
                   onFocus={() => {
-                    if (wsRef.current && wsStatus === 'connected') {
+                    const activeRoom = rooms.find((r) => r.id === activeRoomId);
+                    const hasUnread =
+                      (activeRoom && activeRoom.unreadCount > 0) ||
+                      messages.some(
+                        (msg) =>
+                          String(msg.senderId) !== String(currentUserId) &&
+                          msg.status !== 'seen',
+                      );
+                    if (
+                      hasUnread &&
+                      wsRef.current &&
+                      wsStatus === 'connected'
+                    ) {
                       wsRef.current.send(JSON.stringify({ type: 'seen' }));
                     }
                   }}
