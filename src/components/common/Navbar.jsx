@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Briefcase, Building2, LogOut, Plus, User, Menu, X } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { useAuth } from '@/context';
+import { NotificationBell } from './NotificationBell';
 
 const userNavLinks = [
   { to: ROUTES.HOME, label: 'Jobs' },
@@ -153,6 +154,7 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationBell />
             {isCompany && (
               <Link
                 to={ROUTES.CREATE_JOB}

@@ -19,6 +19,7 @@ Frontend-only React architecture for a scalable job portal application.
 - **Authentication & User Management:**
   - Standard SignIn and Account Registration flows.
   - **Forgot & Reset Password Flow:** A beautiful 2-step flow with loader states, 6-digit OTP validations, password strength/match check, password visibility show/hide toggles, and a 60-second OTP resend cooldown timer.
+- **In-App Notifications System:** A notification bell component integrated into the navigation bar (both desktop and mobile) with real-time polling (every 30s), unread count badges, read-status tracking with database synchronization, and type-specific visual icons.
 - **API Client Enhancements:**
   - Automated JWT token refresh handling.
   - Built-in **20-second connection abort timeout** (`AbortController`) to handle slow mailers or SMTP server hangs.
