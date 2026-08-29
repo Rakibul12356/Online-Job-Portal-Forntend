@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Award, Briefcase, AlertCircle, Info, BellOff } from 'lucide-react';
+import {
+  Bell,
+  Award,
+  Briefcase,
+  AlertCircle,
+  Info,
+  BellOff,
+} from 'lucide-react';
 import { apiClient } from '@/api';
 import { useAuth } from '@/context';
 import { formatTimeAgo } from '@/utils';
@@ -26,10 +33,10 @@ export function NotificationBell() {
   // Poll for notifications every 30 seconds
   useEffect(() => {
     if (!isAuthenticated) return;
-    
+
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
-    
+
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
@@ -53,7 +60,7 @@ export function NotificationBell() {
       const response = await apiClient.patch(`/notifications/${id}/read`);
       if (response.success) {
         setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+          prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
         );
       }
     } catch (error) {
@@ -106,7 +113,7 @@ export function NotificationBell() {
       >
         <Bell className="h-5.5 w-5.5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white animate-pulse">
+          <span className="absolute top-0 right-0 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white animate-pulse">
             {unreadCount}
           </span>
         )}
@@ -117,7 +124,9 @@ export function NotificationBell() {
         <div className="absolute right-0 top-full z-50 mt-2 w-80 sm:w-96 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden animate-slide-down origin-top-right">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
-            <span className="text-sm font-bold text-slate-900">Notifications</span>
+            <span className="text-sm font-bold text-slate-900">
+              Notifications
+            </span>
             {unreadCount > 0 && (
               <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 border border-blue-100/50">
                 {unreadCount} unread
@@ -132,8 +141,12 @@ export function NotificationBell() {
                 <div className="mb-2 rounded-full bg-slate-55/10 p-3 text-gray-400">
                   <BellOff className="h-6 w-6" />
                 </div>
-                <p className="text-sm font-semibold text-gray-800">No notifications yet</p>
-                <p className="text-xs text-gray-500 mt-1">We will notify you when something important happens.</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  No notifications yet
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  We will notify you when something important happens.
+                </p>
               </div>
             ) : (
               notifications.map((notif) => (
@@ -152,7 +165,9 @@ export function NotificationBell() {
                     <div className="flex items-start justify-between gap-2">
                       <h4
                         className={`text-sm leading-5 truncate ${
-                          !notif.isRead ? 'font-bold text-slate-900' : 'font-medium text-gray-700'
+                          !notif.isRead
+                            ? 'font-bold text-slate-900'
+                            : 'font-medium text-gray-700'
                         }`}
                       >
                         {notif.title}
