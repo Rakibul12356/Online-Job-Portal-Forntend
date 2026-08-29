@@ -1,10 +1,7 @@
-// SweetAlert2 Integration Utilities
+import Swal from 'sweetalert2';
 
 export function getSwal() {
-  if (typeof window !== 'undefined' && window.Swal) {
-    return window.Swal;
-  }
-  return null;
+  return Swal;
 }
 
 /**
@@ -113,10 +110,15 @@ export async function showWarningAlert(title = 'Notice', text = '') {
  * @param {Function} navigate - React Router navigate function
  * @param {string} [redirectPath='/sign-in'] - Path to redirect to on confirmation
  */
-export async function showLoginRequiredAlert(navigate, redirectPath = '/sign-in') {
+export async function showLoginRequiredAlert(
+  navigate,
+  redirectPath = '/sign-in',
+) {
   const Swal = getSwal();
   if (!Swal) {
-    const ok = window.confirm('Please log in as a Job Seeker to apply for this job. Go to login?');
+    const ok = window.confirm(
+      'Please log in as a Job Seeker to apply for this job. Go to login?',
+    );
     if (ok && navigate) navigate(redirectPath);
     return;
   }
@@ -151,7 +153,9 @@ export async function showLoginRequiredAlert(navigate, redirectPath = '/sign-in'
 export async function showCompanyCannotApplyAlert() {
   const Swal = getSwal();
   if (!Swal) {
-    alert('Company and Employer accounts cannot apply for jobs. Only Job Seeker accounts can submit applications.');
+    alert(
+      'Company and Employer accounts cannot apply for jobs. Only Job Seeker accounts can submit applications.',
+    );
     return;
   }
 
