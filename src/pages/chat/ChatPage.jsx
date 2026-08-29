@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Briefcase,
   CheckCheck,
+  Check,
   Loader2,
   MessageSquare,
   Search,
@@ -12,11 +13,20 @@ import {
   Building2,
   Clock,
   CircleDot,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 import { chatService } from '@/services';
 import { useAuth } from '@/context';
 import { appConfig } from '@/config/env';
+
+const isRoomForUser = (room, userId) => {
+  return (
+    String(room.otherUserId) === String(userId) ||
+    String(room.otherUser?.id) === String(userId) ||
+    String(room.seekerId) === String(userId) ||
+    String(room.employerId) === String(userId)
+  );
+};
 
 export function ChatPage() {
   const { user } = useAuth();
@@ -29,15 +39,30 @@ export function ChatPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [inputMessage, setInputMessage] = useState('');
   const [wsStatus, setWsStatus] = useState('disconnected'); // 'disconnected' | 'connecting' | 'connected'
 
+  const [isOtherTyping, setIsOtherTyping] = useState(false);
+  const [typingUserName, setTypingUserName] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+
   const wsRef = useRef(null);
+  const globalWsRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
+  const globalReconnectTimeoutRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const activeRoomIdRef = useRef(activeRoomId);
+
+  const [globalWsStatus, setGlobalWsStatus] = useState('disconnected');
 
   const currentUserId = user?.id || user?._id;
+
+  // Sync activeRoomId to ref
+  useEffect(() => {
+    activeRoomIdRef.current = activeRoomId;
+  }, [activeRoomId]);
 
   // 1. Fetch Rooms list
   const fetchRooms = async () => {
@@ -57,6 +82,127 @@ export function ChatPage() {
 
   useEffect(() => {
     fetchRooms();
+  }, []);
+
+  // 1.5 Manage Global WebSocket Connection for inbox list notifications, unread counts, and online user statuses
+  useEffect(() => {
+    const connectGlobalWebSocket = () => {
+      setGlobalWsStatus('connecting');
+
+      const apiBase = appConfig.apiUrl;
+      const wsProtocol = apiBase.startsWith('https') ? 'wss' : 'ws';
+      const baseHostPath = apiBase.replace(/^https?:\/\//, '');
+
+      let token = '';
+      try {
+        const raw = localStorage.getItem('job_portal_user');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          token = parsed?.accessToken || '';
+        }
+      } catch (e) {
+        console.error(
+          'Failed to parse access token for global WS handshake',
+          e,
+        );
+      }
+
+      const wsUrl = `${wsProtocol}://${baseHostPath}/chats/ws?token=${token}`;
+      console.log(
+        'Connecting to Global WebSocket:',
+        wsUrl.replace(token, 'TOKEN_REDACTED'),
+      );
+
+      const socket = new WebSocket(wsUrl);
+      globalWsRef.current = socket;
+
+      socket.onopen = () => {
+        console.log('Global WebSocket connected successfully');
+        setGlobalWsStatus('connected');
+        if (globalReconnectTimeoutRef.current) {
+          clearTimeout(globalReconnectTimeoutRef.current);
+        }
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('Global WS event received:', data);
+
+          if (!data || typeof data !== 'object') return;
+
+          if (data.type) {
+            switch (data.type) {
+              case 'message': {
+                const msg = data.message;
+                if (!msg) return;
+
+                // Update sidebar unreadCount and lastMessage if this room is not active
+                if (msg.roomId !== activeRoomIdRef.current) {
+                  setRooms((prevRooms) =>
+                    prevRooms.map((room) => {
+                      if (room.id === msg.roomId) {
+                        return {
+                          ...room,
+                          lastMessage: msg.message,
+                          updatedAt: msg.createdAt,
+                          unreadCount: (room.unreadCount || 0) + 1,
+                        };
+                      }
+                      return room;
+                    }),
+                  );
+                }
+                break;
+              }
+
+              case 'user_status': {
+                setRooms((prevRooms) =>
+                  prevRooms.map((room) => {
+                    if (isRoomForUser(room, data.userId)) {
+                      return { ...room, isOnline: data.status === 'online' };
+                    }
+                    return room;
+                  }),
+                );
+                break;
+              }
+
+              default:
+                break;
+            }
+          }
+        } catch (err) {
+          console.error('Error handling Global WebSocket message:', err);
+        }
+      };
+
+      socket.onerror = (err) => {
+        console.error('Global WebSocket error:', err);
+        setGlobalWsStatus('disconnected');
+      };
+
+      socket.onclose = () => {
+        console.log('Global WebSocket disconnected');
+        setGlobalWsStatus('disconnected');
+        // Retry connection after 5 seconds
+        globalReconnectTimeoutRef.current = setTimeout(
+          connectGlobalWebSocket,
+          5000,
+        );
+      };
+    };
+
+    connectGlobalWebSocket();
+
+    return () => {
+      if (globalWsRef.current) {
+        globalWsRef.current.close();
+      }
+      if (globalReconnectTimeoutRef.current) {
+        clearTimeout(globalReconnectTimeoutRef.current);
+      }
+    };
   }, []);
 
   // 2. Fetch messages when activeRoomId changes
@@ -117,7 +263,10 @@ export function ChatPage() {
       }
 
       const wsUrl = `${wsProtocol}://${baseHostPath}/chats/${activeRoomId}/ws?token=${token}`;
-      console.log('Connecting to WebSocket:', wsUrl.replace(token, 'TOKEN_REDACTED'));
+      console.log(
+        'Connecting to WebSocket:',
+        wsUrl.replace(token, 'TOKEN_REDACTED'),
+      );
 
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;
@@ -129,40 +278,147 @@ export function ChatPage() {
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
         }
+        // Send a seen read receipt event immediately upon connection
+        try {
+          socket.send(JSON.stringify({ type: 'seen' }));
+        } catch (e) {
+          console.error('Failed to send seen receipt on connect:', e);
+        }
       };
 
       socket.onmessage = (event) => {
         try {
-          const newMsg = JSON.parse(event.data);
-          console.log('New message received from WS:', newMsg);
-          
-          // Append message if it belongs to active room
-          if (newMsg.roomId === activeRoomId) {
-            setMessages((prev) => {
-              // Deduplicate in case backend echos back as well as service
-              if (prev.some((m) => m.id === newMsg.id || (m.createdAt === newMsg.createdAt && m.message === newMsg.message))) {
-                return prev;
-              }
-              return [...prev, newMsg];
-            });
-          }
+          const data = JSON.parse(event.data);
+          console.log('WS event received:', data);
 
-          // Update last message in rooms list
-          setRooms((prevRooms) =>
-            prevRooms.map((room) => {
-              if (room.id === newMsg.roomId) {
-                return {
-                  ...room,
-                  lastMessage: newMsg.message,
-                  updatedAt: newMsg.createdAt,
-                  unreadCount: room.id === activeRoomId ? 0 : (room.unreadCount || 0) + 1,
-                };
+          if (!data || typeof data !== 'object') return;
+
+          if (data.type) {
+            switch (data.type) {
+              case 'message': {
+                const msg = data.message;
+                if (!msg) return;
+
+                if (msg.roomId === activeRoomId) {
+                  setMessages((prev) => {
+                    if (
+                      prev.some(
+                        (m) =>
+                          m.id === msg.id ||
+                          (m.createdAt === msg.createdAt &&
+                            m.message === msg.message),
+                      )
+                    ) {
+                      return prev;
+                    }
+                    return [...prev, msg];
+                  });
+
+                  // Trigger a read receipt back to the server if focus is active AND the message was sent by the other user
+                  if (
+                    String(msg.senderId) !== String(currentUserId) &&
+                    document.hasFocus() &&
+                    wsRef.current &&
+                    socket.readyState === WebSocket.OPEN
+                  ) {
+                    socket.send(JSON.stringify({ type: 'seen' }));
+                  }
+                }
+
+                // Update last message and unread count in rooms list
+                setRooms((prevRooms) =>
+                  prevRooms.map((room) => {
+                    if (room.id === msg.roomId) {
+                      return {
+                        ...room,
+                        lastMessage: msg.message,
+                        updatedAt: msg.createdAt,
+                        unreadCount:
+                          room.id === activeRoomId
+                            ? 0
+                            : (room.unreadCount || 0) + 1,
+                      };
+                    }
+                    return room;
+                  }),
+                );
+                break;
               }
-              return room;
-            })
-          );
+
+              case 'message_status': {
+                if (data.roomId === activeRoomId) {
+                  setMessages((prev) =>
+                    prev.map((msg) => {
+                      if (String(msg.senderId) === String(currentUserId)) {
+                        return { ...msg, status: data.status };
+                      }
+                      return msg;
+                    }),
+                  );
+                }
+                break;
+              }
+
+              case 'typing': {
+                if (String(data.senderId) !== String(currentUserId)) {
+                  setIsOtherTyping(data.isTyping || false);
+                  setTypingUserName(data.senderName || '');
+                }
+                break;
+              }
+
+              case 'user_status': {
+                setRooms((prevRooms) =>
+                  prevRooms.map((room) => {
+                    if (isRoomForUser(room, data.userId)) {
+                      return { ...room, isOnline: data.status === 'online' };
+                    }
+                    return room;
+                  }),
+                );
+                break;
+              }
+
+              default:
+                break;
+            }
+          } else {
+            // Fallback for legacy format
+            const legacyMsg = data;
+            if (legacyMsg.roomId === activeRoomId) {
+              setMessages((prev) => {
+                if (
+                  prev.some(
+                    (m) =>
+                      m.id === legacyMsg.id ||
+                      (m.createdAt === legacyMsg.createdAt &&
+                        m.message === legacyMsg.message),
+                  )
+                ) {
+                  return prev;
+                }
+                return [...prev, legacyMsg];
+              });
+            }
+            setRooms((prevRooms) =>
+              prevRooms.map((room) => {
+                if (room.id === legacyMsg.roomId) {
+                  return {
+                    ...room,
+                    lastMessage: legacyMsg.message,
+                    updatedAt: legacyMsg.createdAt,
+                    unreadCount:
+                      room.id === activeRoomId
+                        ? 0
+                        : (room.unreadCount || 0) + 1,
+                  };
+                }
+                return room;
+              }),
+            );
+          }
         } catch (err) {
-          console.error('Error parsing WebSocket message content:', err);
+          console.error('Error handling WebSocket message:', err);
         }
       };
 
@@ -200,22 +456,81 @@ export function ChatPage() {
   // 4. Auto scroll message history to bottom
   useLayoutEffect(() => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
   }, [messages, messagesLoading]);
+
+  // Reset typing states and timeouts on room change or unmount
+  useEffect(() => {
+    setIsOtherTyping(false);
+    setTypingUserName('');
+    setIsTyping(false);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [activeRoomId]);
+
+  const handleTyping = () => {
+    if (!wsRef.current || wsStatus !== 'connected') return;
+
+    if (!isTyping) {
+      setIsTyping(true);
+      try {
+        wsRef.current.send(JSON.stringify({ type: 'typing', isTyping: true }));
+      } catch (err) {
+        console.error('Failed to send typing indicator:', err);
+      }
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      try {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(
+            JSON.stringify({ type: 'typing', isTyping: false }),
+          );
+        }
+      } catch (err) {
+        console.error('Failed to send stop typing indicator:', err);
+      }
+    }, 1500);
+  };
 
   // 5. Send message action
   const handleSendMessage = (e) => {
     if (e) e.preventDefault();
-    if (!inputMessage.trim() || !wsRef.current || wsStatus !== 'connected') return;
+    if (!inputMessage.trim() || !wsRef.current || wsStatus !== 'connected')
+      return;
 
     try {
       const payload = {
-        message: inputMessage.trim()
+        type: 'message',
+        message: inputMessage.trim(),
       };
-      
+
       wsRef.current.send(JSON.stringify(payload));
-      
+
+      // Clear local typing timeout and send stop typing event
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      setIsTyping(false);
+      try {
+        wsRef.current.send(JSON.stringify({ type: 'typing', isTyping: false }));
+      } catch (err) {
+        console.error('Failed to send stop typing indicator:', err);
+      }
+
       // Clear input
       setInputMessage('');
     } catch (err) {
@@ -228,23 +543,31 @@ export function ChatPage() {
     setSearchParams({ room: roomId });
     // Reset unread count for selected room locally
     setRooms((prevRooms) =>
-      prevRooms.map((room) => (room.id === roomId ? { ...room, unreadCount: 0 } : room))
+      prevRooms.map((room) =>
+        room.id === roomId ? { ...room, unreadCount: 0 } : room,
+      ),
     );
   };
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
+  const isOtherUserOnline = activeRoom?.isOnline || false;
 
-  // Filter rooms by search query
-  const filteredRooms = rooms.filter((room) =>
-    room.otherUserName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter rooms by search query and sort by newest message (updatedAt) descending
+  const filteredRooms = rooms
+    .filter((room) =>
+      room.otherUserName?.toLowerCase().includes(searchQuery.toLowerCase()),
+    )
+    .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
 
   // Formatting date labels
   const formatTime = (isoString) => {
     if (!isoString) return '';
     try {
       const date = new Date(isoString);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     } catch {
       return '';
     }
@@ -253,7 +576,11 @@ export function ChatPage() {
   const formatDateHeader = (isoString) => {
     try {
       const date = new Date(isoString);
-      return date.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+      return date.toLocaleDateString([], {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+      });
     } catch {
       return '';
     }
@@ -306,16 +633,22 @@ export function ChatPage() {
           ) : filteredRooms.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-gray-500 p-6 text-center">
               <MessageSquare className="h-8 w-8 text-gray-300 mb-2" />
-              <span className="text-sm font-medium">No conversations found</span>
+              <span className="text-sm font-medium">
+                No conversations found
+              </span>
               <p className="text-xs text-gray-400 mt-1">
-                {searchQuery ? 'Try matching another name.' : 'Start a chat from job detail details or candidate screens.'}
+                {searchQuery
+                  ? 'Try matching another name.'
+                  : 'Start a chat from job detail details or candidate screens.'}
               </p>
             </div>
           ) : (
             filteredRooms.map((room) => {
               const isActive = room.id === activeRoomId;
               const hasUnread = room.unreadCount > 0;
-              const initials = room.otherUserName ? room.otherUserName.substring(0, 2).toUpperCase() : '??';
+              const initials = room.otherUserName
+                ? room.otherUserName.substring(0, 2).toUpperCase()
+                : '??';
 
               return (
                 <button
@@ -329,22 +662,29 @@ export function ChatPage() {
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 font-semibold text-white text-sm">
                       {initials}
                     </div>
-                    {wsStatus === 'connected' && isActive && (
+                    {room.isOnline && (
                       <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-500" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <h4 className={`text-sm truncate ${hasUnread ? 'font-bold text-black' : 'font-semibold text-gray-800'}`}>
+                      <h4
+                        className={`text-sm truncate ${hasUnread ? 'font-bold text-black' : 'font-semibold text-gray-800'}`}
+                      >
                         {room.otherUserName}
                       </h4>
                       {room.updatedAt && (
                         <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
-                          {new Date(room.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                          {new Date(room.updatedAt).toLocaleDateString([], {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
                         </span>
                       )}
                     </div>
-                    <p className={`text-xs truncate ${hasUnread ? 'font-medium text-slate-900' : 'text-gray-500'}`}>
+                    <p
+                      className={`text-xs truncate ${hasUnread ? 'font-medium text-slate-900' : 'text-gray-500'}`}
+                    >
                       {room.lastMessage || 'No messages yet'}
                     </p>
                   </div>
@@ -361,7 +701,9 @@ export function ChatPage() {
       </aside>
 
       {/* Main Chat Area */}
-      <section className={`flex-1 flex flex-col min-w-0 ${!activeRoomId ? 'hidden md:flex' : 'flex'}`}>
+      <section
+        className={`flex-1 flex flex-col min-w-0 ${!activeRoomId ? 'hidden md:flex' : 'flex'}`}
+      >
         {activeRoomId && activeRoom ? (
           <>
             {/* Active Room Header */}
@@ -374,12 +716,23 @@ export function ChatPage() {
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </button>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 font-bold text-white text-xs shrink-0">
-                  {activeRoom.otherUserName ? activeRoom.otherUserName.substring(0, 2).toUpperCase() : '??'}
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 font-bold text-white text-xs shrink-0 relative">
+                  {activeRoom.otherUserName
+                    ? activeRoom.otherUserName.substring(0, 2).toUpperCase()
+                    : '??'}
+                  {isOtherUserOnline && (
+                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-white bg-green-500" />
+                  )}
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-semibold truncate text-slate-900">
+                  <h3 className="text-sm font-semibold truncate text-slate-900 flex items-center gap-1.5">
                     {activeRoom.otherUserName}
+                    {isOtherUserOnline && (
+                      <span
+                        className="h-2 w-2 rounded-full bg-green-500 inline-block animate-pulse"
+                        title="Online"
+                      />
+                    )}
                   </h3>
                   <div className="flex items-center gap-1.5 text-xs text-gray-400">
                     {wsStatus === 'connected' ? (
@@ -415,7 +768,10 @@ export function ChatPage() {
             </header>
 
             {/* Message Feed */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gray-50/30 p-4 space-y-6 md:p-6">
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto bg-gray-50/30 p-4 space-y-6 md:p-6"
+            >
               {messagesLoading && messages.length === 0 ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-slate-600" />
@@ -423,9 +779,12 @@ export function ChatPage() {
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
                   <MessageSquare className="h-10 w-10 text-gray-300 mb-2" />
-                  <span className="text-sm font-semibold text-gray-700">Say hello!</span>
+                  <span className="text-sm font-semibold text-gray-700">
+                    Say hello!
+                  </span>
                   <p className="text-xs text-gray-400 mt-1">
-                    This is the start of your secure conversation regarding this job.
+                    This is the start of your secure conversation regarding this
+                    job.
                   </p>
                 </div>
               ) : (
@@ -438,13 +797,16 @@ export function ChatPage() {
                     </div>
 
                     {messageGroups[day].map((msg) => {
-                      const isSentByMe = String(msg.senderId) === String(currentUserId);
+                      const isSentByMe =
+                        String(msg.senderId) === String(currentUserId);
                       return (
                         <div
                           key={msg.id || msg.createdAt}
                           className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div className={`flex flex-col max-w-[75%] sm:max-w-[60%] ${isSentByMe ? 'items-end' : 'items-start'}`}>
+                          <div
+                            className={`flex flex-col max-w-[75%] sm:max-w-[60%] ${isSentByMe ? 'items-end' : 'items-start'}`}
+                          >
                             <div
                               className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
                                 isSentByMe
@@ -458,7 +820,17 @@ export function ChatPage() {
                               <Clock className="h-2.5 w-2.5" />
                               {formatTime(msg.createdAt)}
                               {isSentByMe && (
-                                <CheckCheck className={`ml-0.5 h-3.5 w-3.5 ${msg.isRead ? 'text-blue-500' : 'text-gray-300'}`} />
+                                <>
+                                  {(!msg.status || msg.status === 'sent') && (
+                                    <Check className="ml-0.5 h-3.5 w-3.5 text-gray-400" />
+                                  )}
+                                  {msg.status === 'delivered' && (
+                                    <CheckCheck className="ml-0.5 h-3.5 w-3.5 text-gray-400" />
+                                  )}
+                                  {msg.status === 'seen' && (
+                                    <CheckCheck className="ml-0.5 h-3.5 w-3.5 text-blue-500" />
+                                  )}
+                                </>
                               )}
                             </span>
                           </div>
@@ -468,17 +840,51 @@ export function ChatPage() {
                   </div>
                 ))
               )}
+              {isOtherTyping && (
+                <div className="flex justify-start items-center gap-2 text-xs text-gray-500 italic animate-pulse py-2 px-1">
+                  <span className="flex gap-0.5 items-center shrink-0">
+                    <span
+                      className="h-1 w-1 rounded-full bg-gray-400 animate-bounce"
+                      style={{ animationDelay: '0ms' }}
+                    />
+                    <span
+                      className="h-1 w-1 rounded-full bg-gray-400 animate-bounce"
+                      style={{ animationDelay: '150ms' }}
+                    />
+                    <span
+                      className="h-1 w-1 rounded-full bg-gray-400 animate-bounce"
+                      style={{ animationDelay: '300ms' }}
+                    />
+                  </span>
+                  {typingUserName || activeRoom.otherUserName} is typing...
+                </div>
+              )}
             </div>
 
             {/* Message Input Form */}
-            <form onSubmit={handleSendMessage} className="border-t border-gray-200 bg-white p-4">
+            <form
+              onSubmit={handleSendMessage}
+              className="border-t border-gray-200 bg-white p-4"
+            >
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder={wsStatus === 'connected' ? "Type your message..." : "Connecting to chat room..."}
+                  placeholder={
+                    wsStatus === 'connected'
+                      ? 'Type your message...'
+                      : 'Connecting to chat room...'
+                  }
                   disabled={wsStatus !== 'connected'}
                   value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
+                  onChange={(e) => {
+                    setInputMessage(e.target.value);
+                    handleTyping();
+                  }}
+                  onFocus={() => {
+                    if (wsRef.current && wsStatus === 'connected') {
+                      wsRef.current.send(JSON.stringify({ type: 'seen' }));
+                    }
+                  }}
                   className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:border-slate-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:opacity-60"
                 />
                 <button
@@ -497,9 +903,12 @@ export function ChatPage() {
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm mb-4">
               <MessageSquare className="h-8 w-8 text-slate-800" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900">Your Conversations</h3>
+            <h3 className="text-lg font-bold text-slate-900">
+              Your Conversations
+            </h3>
             <p className="mt-1 max-w-sm text-sm text-gray-500">
-              Select a chat room from the sidebar to view candidate information, check status updates, and message in real-time.
+              Select a chat room from the sidebar to view candidate information,
+              check status updates, and message in real-time.
             </p>
           </div>
         )}
