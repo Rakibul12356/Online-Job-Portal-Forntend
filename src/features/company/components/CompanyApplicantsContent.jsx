@@ -10,6 +10,7 @@ import {
   UserCheck,
   XCircle,
   MessageSquare,
+  X,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { employerService, chatService } from '@/services';
@@ -17,7 +18,6 @@ import { LoadingSpinner } from '@/components';
 import { sanitizeMediaUrl } from '@/config/env';
 import { useToast } from '@/context';
 import { formatDate, showConfirmDialog } from '@/utils';
-
 
 import {
   dateFilterOptions,
@@ -48,20 +48,64 @@ export function CompanyApplicantsContent() {
   const toast = useToast();
   const navigate = useNavigate();
   const [statusFilters, setStatusFilters] = useState(defaultStatusFilters);
-  const [experienceFilters, setExperienceFilters] = useState(defaultExperienceFilters);
+  const [experienceFilters, setExperienceFilters] = useState(
+    defaultExperienceFilters,
+  );
   const [dateFilter, setDateFilter] = useState(defaultDateFilter);
 
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [updatingAction, setUpdatingAction] = useState({ id: null, status: null });
+  const [updatingAction, setUpdatingAction] = useState({
+    id: null,
+    status: null,
+  });
   const [chatLoadingId, setChatLoadingId] = useState(null);
+  const [schedulingApplicant, setSchedulingApplicant] = useState(null);
 
+  const handleScheduleInterview = async (
+    appId,
+    { interviewDate, interviewTime, notes },
+  ) => {
+    setUpdatingAction({ id: appId, status: 'interviewed' });
+    setSchedulingApplicant(null);
+
+    // Optimistically update candidate status in local state
+    setApplicants((curr) =>
+      curr.map((item) =>
+        item.id === appId ? { ...item, status: 'interviewed' } : item,
+      ),
+    );
+
+    try {
+      const response = await employerService.updateApplicantStatus(
+        appId,
+        'interviewed',
+        {
+          interviewDate,
+          interviewTime,
+          notes,
+        },
+      );
+      if (response.success) {
+        toast.success('Interview scheduled successfully!');
+        fetchApplicants();
+      } else {
+        toast.error(response.message || 'Failed to schedule interview');
+        fetchApplicants();
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to schedule interview');
+      fetchApplicants();
+    } finally {
+      setUpdatingAction({ id: null, status: null });
+    }
+  };
 
   const handleChatWithCandidate = async (applicant) => {
     const jobId = applicant.jobId || (applicant.job && applicant.job.id) || '1';
     const seekerId = applicant.seekerId || applicant.userId || applicant.id;
-    
+
     setChatLoadingId(applicant.id);
     try {
       const response = await chatService.getOrCreateRoom(jobId, seekerId);
@@ -145,11 +189,16 @@ export function CompanyApplicantsContent() {
     setUpdatingAction({ id: appId, status: statusVal });
     // Optimistically update candidate status in local state
     setApplicants((curr) =>
-      curr.map((item) => (item.id === appId ? { ...item, status: statusVal } : item))
+      curr.map((item) =>
+        item.id === appId ? { ...item, status: statusVal } : item,
+      ),
     );
 
     try {
-      const response = await employerService.updateApplicantStatus(appId, statusVal);
+      const response = await employerService.updateApplicantStatus(
+        appId,
+        statusVal,
+      );
       if (response.success) {
         toast.success(`Candidate marked as ${statusVal}!`);
         fetchApplicants();
@@ -271,16 +320,23 @@ export function CompanyApplicantsContent() {
             </div>
           ) : applicants.length === 0 ? (
             <div className="rounded-lg border border-dashed border-gray-300 py-16 text-center">
-              <p className="text-gray-500 font-medium">No candidates match your filters.</p>
+              <p className="text-gray-500 font-medium">
+                No candidates match your filters.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
               {applicants.map((applicant) => {
-                const name = applicant.seekerName || applicant.name || 'Candidate';
+                const name =
+                  applicant.seekerName || applicant.name || 'Candidate';
                 const email = applicant.seekerEmail || applicant.email || '';
-                const skillsList = applicant.seekerSkills || applicant.skills || [];
-                const experience = applicant.seekerExperience || applicant.experience || 'N/A';
-                const dateApplied = applicant.appliedAt ? formatDate(applicant.appliedAt) : 'N/A';
+                const skillsList =
+                  applicant.seekerSkills || applicant.skills || [];
+                const experience =
+                  applicant.seekerExperience || applicant.experience || 'N/A';
+                const dateApplied = applicant.appliedAt
+                  ? formatDate(applicant.appliedAt)
+                  : 'N/A';
                 const status = applicant.status;
 
                 return (
@@ -290,16 +346,16 @@ export function CompanyApplicantsContent() {
                   >
                     <div className="flex flex-col gap-6 md:flex-row">
                       <div className="shrink-0">
-                        <div
-                          className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-xl font-bold text-white"
-                        >
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-xl font-bold text-white">
                           {name.substring(0, 2).toUpperCase()}
                         </div>
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                           <div>
-                            <h3 className="mb-1 text-lg font-semibold">{name}</h3>
+                            <h3 className="mb-1 text-lg font-semibold">
+                              {name}
+                            </h3>
                             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
                               <span className="flex items-center gap-1">
                                 <Mail className="h-3 w-3" />
@@ -315,12 +371,16 @@ export function CompanyApplicantsContent() {
                               </span>
                             </div>
                             <p className="mt-1 text-xs text-gray-500 font-medium">
-                              Applied for: <span className="text-slate-900">{applicant.jobTitle || 'N/A'}</span>
+                              Applied for:{' '}
+                              <span className="text-slate-900">
+                                {applicant.jobTitle || 'N/A'}
+                              </span>
                             </p>
                           </div>
                           <span
                             className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium border ${
-                              statusStyles[status] || 'bg-gray-100 text-gray-800'
+                              statusStyles[status] ||
+                              'bg-gray-100 text-gray-800'
                             }`}
                           >
                             {statusLabels[status] || status}
@@ -339,6 +399,32 @@ export function CompanyApplicantsContent() {
                             ))}
                           </div>
                         )}
+
+                        {status === 'interviewed' &&
+                          applicant.interviewDate && (
+                            <div className="mb-4 rounded-lg bg-blue-50 border border-blue-100 p-4 animate-fade-in">
+                              <h4 className="mb-2 text-sm font-semibold text-blue-900 flex items-center gap-1.5">
+                                <Calendar className="h-4 w-4 text-blue-700" />
+                                Interview Details
+                              </h4>
+                              <div className="text-xs text-blue-800 space-y-1">
+                                <p>
+                                  <strong>Date:</strong>{' '}
+                                  {formatDate(applicant.interviewDate)}
+                                </p>
+                                <p>
+                                  <strong>Time:</strong>{' '}
+                                  {applicant.interviewTime}
+                                </p>
+                                {applicant.interviewNotes && (
+                                  <p className="mt-2 text-gray-700 bg-white/60 p-2.5 rounded border border-blue-200/50 break-words">
+                                    <strong>Instructions / Notes:</strong>{' '}
+                                    {applicant.interviewNotes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
                         <div className="flex flex-wrap gap-2">
                           {applicant.resumeUrl && (
@@ -370,10 +456,16 @@ export function CompanyApplicantsContent() {
                               <button
                                 type="button"
                                 disabled={updatingAction.id !== null}
-                                onClick={() => handleUpdateStatus(applicant.id, 'shortlisted')}
+                                onClick={() =>
+                                  handleUpdateStatus(
+                                    applicant.id,
+                                    'shortlisted',
+                                  )
+                                }
                                 className="flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
                               >
-                                {updatingAction.id === applicant.id && updatingAction.status === 'shortlisted' ? (
+                                {updatingAction.id === applicant.id &&
+                                updatingAction.status === 'shortlisted' ? (
                                   <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
                                 ) : (
                                   <UserCheck className="mr-2 h-3 w-3" />
@@ -383,14 +475,12 @@ export function CompanyApplicantsContent() {
                               <button
                                 type="button"
                                 disabled={updatingAction.id !== null}
-                                onClick={() => handleUpdateStatus(applicant.id, 'interviewed')}
+                                onClick={() =>
+                                  setSchedulingApplicant(applicant)
+                                }
                                 className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium hover:bg-gray-50 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                {updatingAction.id === applicant.id && updatingAction.status === 'interviewed' ? (
-                                  <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-slate-900 border-t-transparent" />
-                                ) : (
-                                  <Calendar className="mr-2 h-3 w-3" />
-                                )}
+                                <Calendar className="mr-2 h-3 w-3" />
                                 Schedule Interview
                               </button>
                             </>
@@ -399,14 +489,10 @@ export function CompanyApplicantsContent() {
                             <button
                               type="button"
                               disabled={updatingAction.id !== null}
-                              onClick={() => handleUpdateStatus(applicant.id, 'interviewed')}
+                              onClick={() => setSchedulingApplicant(applicant)}
                               className="flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-800/80 disabled:cursor-not-allowed"
                             >
-                              {updatingAction.id === applicant.id && updatingAction.status === 'interviewed' ? (
-                                <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
-                              ) : (
-                                <Calendar className="mr-2 h-3 w-3" />
-                              )}
+                              <Calendar className="mr-2 h-3 w-3" />
                               Interview Seeker
                             </button>
                           )}
@@ -414,10 +500,13 @@ export function CompanyApplicantsContent() {
                             <button
                               type="button"
                               disabled={updatingAction.id !== null}
-                              onClick={() => handleUpdateStatus(applicant.id, 'rejected')}
+                              onClick={() =>
+                                handleUpdateStatus(applicant.id, 'rejected')
+                              }
                               className="flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {updatingAction.id === applicant.id && updatingAction.status === 'rejected' ? (
+                              {updatingAction.id === applicant.id &&
+                              updatingAction.status === 'rejected' ? (
                                 <span className="mr-2 h-3 w-3 animate-spin rounded-full border border-red-600 border-t-transparent" />
                               ) : (
                                 <XCircle className="mr-2 h-3 w-3" />
@@ -433,6 +522,181 @@ export function CompanyApplicantsContent() {
               })}
             </div>
           )}
+        </div>
+      </div>
+
+      {schedulingApplicant && (
+        <ScheduleInterviewModal
+          applicant={schedulingApplicant}
+          onClose={() => setSchedulingApplicant(null)}
+          onSchedule={handleScheduleInterview}
+        />
+      )}
+    </div>
+  );
+}
+
+function ScheduleInterviewModal({ applicant, onClose, onSchedule }) {
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const name = applicant.seekerName || applicant.name || 'Candidate';
+  const jobTitle =
+    applicant.jobTitle ||
+    (applicant.job && applicant.job.title) ||
+    'the position';
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!date || !time) {
+      setError('Please select both date and time.');
+      return;
+    }
+    setError('');
+    setSubmitting(true);
+    try {
+      await onSchedule(applicant.id, {
+        interviewDate: date,
+        interviewTime: time,
+        notes,
+      });
+    } catch (err) {
+      setError(err.message || 'Failed to schedule interview.');
+      setSubmitting(false);
+    }
+  };
+
+  const inputClass =
+    'w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-slate-900 focus:ring-1 focus:ring-slate-900 bg-white';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="schedule-dialog-title"
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-2xl animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="space-y-6 p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2
+                id="schedule-dialog-title"
+                className="text-xl font-bold text-gray-900"
+              >
+                Schedule Interview
+              </h2>
+              <p className="mt-1.5 text-sm text-gray-500">
+                Invite{' '}
+                <span className="font-semibold text-slate-800">{name}</span> to
+                interview for{' '}
+                <span className="font-semibold text-slate-800">{jobTitle}</span>
+                .
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-gray-400 hover:bg-gray-55/10 hover:text-gray-700 transition-colors"
+              aria-label="Close dialog"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {error && (
+            <p
+              className="rounded-lg bg-rose-50 px-3 py-2.5 text-sm text-rose-600 font-medium"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label
+                htmlFor="interview-date"
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+              >
+                Interview Date
+              </label>
+              <input
+                id="interview-date"
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className={inputClass}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="interview-time"
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+              >
+                Interview Time
+              </label>
+              <input
+                id="interview-time"
+                type="time"
+                required
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="interview-notes"
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+              >
+                Notes / Instructions (Optional)
+              </label>
+              <textarea
+                id="interview-notes"
+                rows={4}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="E.g., Google Meet link, interview format, location, or dress code instructions..."
+                className={inputClass}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-10 items-center justify-center rounded-lg border border-gray-300 px-4 text-sm font-medium hover:bg-gray-50 text-slate-900 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex h-10 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800 transition-colors disabled:bg-slate-800/80 disabled:cursor-not-allowed"
+              >
+                {submitting ? (
+                  <>
+                    <span className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Scheduling...
+                  </>
+                ) : (
+                  'Schedule'
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

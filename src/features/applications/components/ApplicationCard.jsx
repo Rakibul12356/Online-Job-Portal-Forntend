@@ -13,7 +13,6 @@ import { ROUTES } from '@/constants';
 import { chatService } from '@/services';
 import { formatDate } from '@/utils';
 
-
 const statusBadgeStyles = {
   pending: 'bg-amber-100 text-amber-800 border border-amber-200',
   shortlisted: 'bg-green-100 text-green-800 border border-green-200',
@@ -57,7 +56,7 @@ export function ApplicationCard({ application, onWithdraw, isWithdrawing }) {
   const appliedOn = application.appliedAt
     ? `Applied on ${formatDate(application.appliedAt)}`
     : application.appliedOn || 'N/A';
-  
+
   const showWithdraw = status === 'pending' || status === 'shortlisted';
 
   return (
@@ -118,6 +117,29 @@ export function ApplicationCard({ application, onWithdraw, isWithdrawing }) {
             )}
           </div>
 
+          {status === 'interviewed' && application.interviewDate && (
+            <div className="mb-4 rounded-lg bg-blue-50 border border-blue-100 p-4 animate-fade-in">
+              <h4 className="mb-2 text-sm font-semibold text-blue-900 flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-blue-700" />
+                Interview Scheduled
+              </h4>
+              <div className="text-xs text-blue-800 space-y-1">
+                <p>
+                  <strong>Date:</strong> {formatDate(application.interviewDate)}
+                </p>
+                <p>
+                  <strong>Time:</strong> {application.interviewTime}
+                </p>
+                {application.interviewNotes && (
+                  <p className="mt-2 text-gray-700 bg-white/60 p-2.5 rounded border border-blue-200/50 break-words">
+                    <strong>Instructions / Notes:</strong>{' '}
+                    {application.interviewNotes}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="flex items-center gap-1 text-xs text-gray-500">
               <Clock className="h-3 w-3" />
@@ -170,4 +192,3 @@ export function ApplicationCard({ application, onWithdraw, isWithdrawing }) {
 }
 
 export default ApplicationCard;
-

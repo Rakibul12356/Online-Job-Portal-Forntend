@@ -6,6 +6,7 @@ import {
   AlertCircle,
   Info,
   BellOff,
+  Calendar,
 } from 'lucide-react';
 import { apiClient } from '@/api';
 import { useAuth } from '@/context';
@@ -82,6 +83,12 @@ export function NotificationBell() {
         return (
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 border border-blue-100">
             <Briefcase className="h-4.5 w-4.5" />
+          </div>
+        );
+      case 'interview':
+        return (
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
+            <Calendar className="h-4.5 w-4.5" />
           </div>
         );
       case 'reject':

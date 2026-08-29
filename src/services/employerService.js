@@ -57,7 +57,9 @@ export const employerService = {
       }
     });
     const queryString = query.toString();
-    const path = queryString ? `/company/applicants?${queryString}` : '/company/applicants';
+    const path = queryString
+      ? `/company/applicants?${queryString}`
+      : '/company/applicants';
     return apiClient.get(path);
   },
 
@@ -65,8 +67,11 @@ export const employerService = {
     return apiClient.get(`/company/applicants/${id}`);
   },
 
-  async updateApplicantStatus(id, status) {
-    return apiClient.patch(`/company/applicants/${id}/status`, { status });
+  async updateApplicantStatus(id, status, details = {}) {
+    return apiClient.patch(`/company/applicants/${id}/status`, {
+      status,
+      ...details,
+    });
   },
 
   async getCompanySettings() {
